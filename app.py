@@ -39,13 +39,13 @@ with tab2:
         if len(ai_images) == 0 or len(real_images) == 0:
             st.warning("No images found in one of the folders.")
         else:
-            # Initialize decks
+            # Initialize decks in session state
             if "ai_deck" not in st.session_state:
                 st.session_state.ai_deck = ai_images.copy()
             if "real_deck" not in st.session_state:
                 st.session_state.real_deck = real_images.copy()
 
-            # End of game check
+            # Check end of game
             if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
                 st.success("🎉 You’ve completed all challenges! Great job!")
 
@@ -60,51 +60,69 @@ with tab2:
                 ]
                 st.info("Tip: " + random.choice(tips))
             else:
-                # Pick images if not already set
+                # Pick new images if starting or after New Challenge
                 if "left_img" not in st.session_state or "right_img" not in st.session_state:
-                    # Pick one random AI and one random real image
-                    ai_img_name = random.choice(st.session_state.ai_deck)
-                    st.session_state.ai_deck.remove(ai_img_name)
+                    if len(st.session_state.ai_deck) > 0 and len(st.session_state.real_deck) > 0:
+                        ai_img_name = random.choice(st.session_state.ai_deck)
+                        st.session_state.ai_deck.remove(ai_img_name)
 
-                    real_img_name = random.choice(st.session_state.real_deck)
-                    st.session_state.real_deck.remove(real_img_name)
+                        real_img_name = random.choice(st.session_state.real_deck)
+                        st.session_state.real_deck.remove(real_img_name)
 
-                    ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
-                    real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
+                        ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
+                        real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
-                    # Randomize left/right
-                    left_is_fake = random.choice([True, False])
-                    if left_is_fake:
-                        st.session_state.left_img = ai_img
-                        st.session_state.right_img = real_img
-                        st.session_state.left_is_fake = True
-                    else:
-                        st.session_state.left_img = real_img
-                        st.session_state.right_img = ai_img
-                        st.session_state.left_is_fake = False
+                        # Random left/right
+                        left_is_fake = random.choice([True, False])
+                        if left_is_fake:
+                            st.session_state.left_img = ai_img
+                            st.session_state.right_img = real_img
+                            st.session_state.left_is_fake = True
+                        else:
+                            st.session_state.left_img = real_img
+                            st.session_state.right_img = ai_img
+                            st.session_state.left_is_fake = False
 
-                # Display images
-                col1, col2 = st.columns([1,1])
-                with col1:
-                    st.image(st.session_state.left_img, caption="Left", use_container_width=True)
-                with col2:
-                    st.image(st.session_state.right_img, caption="Right", use_container_width=True)
+                # --- Display images ---
+                if "left_img" in st.session_state and "right_img" in st.session_state:
+                    col1, col2 = st.columns([1,1])
+                    with col1:
+                        st.image(st.session_state.left_img, caption="Left", use_container_width=True)
+                    with col2:
+                        st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-                # Guess radio button
-                guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+                    # Guess radio button
+                    guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
 
-                if st.button("Submit Guess"):
-                    correct = "Left" if st.session_state.left_is_fake else "Right"
-                    if guess == correct:
-                        st.balloons()
-                        st.success("Correct! 🎉")
-                    else:
-                        st.error(f"Wrong — the AI image was on the **{correct}**.")
+                    if st.button("Submit Guess"):
+                        correct = "Left" if st.session_state.left_is_fake else "Right"
+                        if guess == correct:
+                            st.balloons()
+                            st.success("Correct! 🎉")
+                        else:
+                            st.error(f"Wrong — the AI image was on the **{correct}**.")
 
-                if st.button("New Challenge"):
-                    # Clear current images for next round
-                    st.session_state.left_img = None
-                    st.session_state.right_img = None
+                    if st.button("New Challenge"):
+                        # Pick next round immediately instead of setting None
+                        if len(st.session_state.ai_deck) > 0 and len(st.session_state.real_deck) > 0:
+                            ai_img_name = random.choice(st.session_state.ai_deck)
+                            st.session_state.ai_deck.remove(ai_img_name)
+
+                            real_img_name = random.choice(st.session_state.real_deck)
+                            st.session_state.real_deck.remove(real_img_name)
+
+                            ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
+                            real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
+
+                            left_is_fake = random.choice([True, False])
+                            if left_is_fake:
+                                st.session_state.left_img = ai_img
+                                st.session_state.right_img = real_img
+                                st.session_state.left_is_fake = True
+                            else:
+                                st.session_state.left_img = real_img
+                                st.session_state.right_img = ai_img
+                                st.session_state.left_is_fake = False
 
 # --- Tab 3: Tips & Safety ---
 with tab3:
