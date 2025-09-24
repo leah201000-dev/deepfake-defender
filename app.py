@@ -3,7 +3,8 @@ from PIL import Image
 import os
 import random
 
-st.set_page_config(page_title="Deepfake Defender", layout="wide")
+# --- Page config ---
+st.set_page_config(page_title="Deepfake Defender", layout="centered")
 
 # --- Define Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
@@ -30,9 +31,10 @@ with tab2:
     if not os.path.exists(ai_folder) or not os.path.exists(real_folder):
         st.error("AI or Real images folder not found. Make sure 'ai_faces' and 'real_faces' exist with images inside.")
     else:
-        # List image filenames
-        ai_images = os.listdir(ai_folder)
-        real_images = os.listdir(real_folder)
+        # List only image files
+        valid_extensions = [".jpg", ".jpeg", ".png"]
+        ai_images = [f for f in os.listdir(ai_folder) if os.path.splitext(f)[1].lower() in valid_extensions]
+        real_images = [f for f in os.listdir(real_folder) if os.path.splitext(f)[1].lower() in valid_extensions]
 
         if len(ai_images) == 0 or len(real_images) == 0:
             st.warning("No images found in one of the folders.")
@@ -62,8 +64,8 @@ with tab2:
                     st.session_state.left_img = real_img
                     st.session_state.right_img = ai_img
 
-            # Display images in columns
-            col1, col2 = st.columns(2)
+            # Display images in equal columns
+            col1, col2 = st.columns([1,1])
             with col1:
                 st.image(st.session_state.left_img, caption="Left", use_container_width=True)
             with col2:
