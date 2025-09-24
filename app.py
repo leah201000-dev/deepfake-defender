@@ -3,12 +3,19 @@ from PIL import Image
 import numpy as np
 import io
 import random
+import requests
 
 st.set_page_config(page_title="Deepfake Defender", layout="centered")
 
 # --- helper functions ---
 def load_image_from_bytes(bytes_data):
     return Image.open(io.BytesIO(bytes_data)).convert("RGB")
+
+def load_image_from_url(url):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    r = requests.get(url, headers=headers, timeout=10)
+    r.raise_for_status()
+    return load_image_from_bytes(r.content)
 
 def ela_image_pil(pil_im, quality=90):
     """
@@ -34,9 +41,6 @@ def ela_image_pil(pil_im, quality=90):
     return ela_img, mean_diff
 
 def score_to_likelihood(mean_diff):
-    """
-    Convert mean ELA diff -> rough 'manipulation likelihood' percentage.
-    """
     likelihood = min(100.0, (mean_diff / 15.0) * 100.0)
     return likelihood
 
@@ -75,29 +79,40 @@ with tab2:
     st.header("Mini-Game — Spot the AI image")
     st.write("You will see two images: one AI-generated and one real. Guess which one is AI-generated.")
 
-    # Initialize session state placeholders for your own images
+    # Initialize session state
     if "left_is_fake" not in st.session_state:
-        st.session_state.left_is_fake = True
-        st.session_state.left_image = None  # assign your own PIL image later
-        st.session_state.right_image = None
+        st.session_state.left_is_fake = random.choice([True, False])
+        st.session_state.seed = random.randint(1, 99999)
 
     if st.button("New Challenge"):
         st.session_state.left_is_fake = random.choice([True, False])
-        # Update left_image and right_image with your own images when ready
-        st.session_state.left_image = None
-        st.session_state.right_image = None
+        st.session_state.seed = random.randint(1, 99999)
 
+    # Image URLs
+    fake_url = "https://thispersondoesnotexist.com/image"
+    real_url = f"https://picsum.photos/seed/{st.session_state.seed}/400/300"
+
+    if st.session_state.left_is_fake:
+        left_url, right_url = fake_url, real_url
+    else:
+        left_url, right_url = real_url, fake_url
+
+    # Load images
+    try:
+        left_img = load_image_from_url(left_url)
+        right_img = load_image_from_url(right_url)
+    except Exception as e:
+        st.warning("Could not load images for this round.")
+        left_img, right_img = None, None
+
+    # Display images
     col1, col2 = st.columns(2)
     with col1:
-        if st.session_state.left_image is not None:
-            st.image(st.session_state.left_image, caption="Left", use_container_width=True)
-        else:
-            st.write("Left image placeholder")
+        if left_img is not None:
+            st.image(left_img, caption="Left", use_container_width=True)
     with col2:
-        if st.session_state.right_image is not None:
-            st.image(st.session_state.right_image, caption="Right", use_container_width=True)
-        else:
-            st.write("Right image placeholder")
+        if right_img is not None:
+            st.image(right_img, caption="Right", use_container_width=True)
 
     guess = st.radio("Which is AI-generated?", options=["Left", "Right"])
     if st.button("Submit Guess"):
