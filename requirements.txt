@@ -5,3 +5,5 @@ matplotlib
 resemblyzer
 pillow
 requests
+deepface
+opencv-python-headless
