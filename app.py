@@ -1,6 +1,6 @@
 import streamlit as st
 
-# Page title
+# Title
 st.title("Deepfake Defender")
 st.write("Protect your identity and creativity online with AI!")
 
@@ -14,7 +14,6 @@ with tab1:
     
     if uploaded_file is not None:
         st.write("AI detection placeholder:")
-        # Here we would run the AI detection
         st.write("Confidence: 85% Real, 15% AI-generated")
         st.image("https://via.placeholder.com/400x200.png?text=Example+Image+Preview")
 
@@ -22,7 +21,7 @@ with tab1:
 with tab2:
     st.header("Spot the Fake Mini-Game")
     st.write("Upload or view a file and guess: Real or AI-generated?")
-    st.write("This is a placeholder for the mini-game logic.")
+    st.write("This is a placeholder for mini-game logic.")
 
 # -------- Tab 3: Tips & Stats --------
 with tab3:
