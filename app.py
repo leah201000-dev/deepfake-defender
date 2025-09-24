@@ -2,11 +2,8 @@ import streamlit as st
 from PIL import Image
 import os
 import random
-import numpy as np
-import cv2
-from deepface import DeepFace
 
-# --- Page config (must be first Streamlit command) ---
+# --- Page config ---
 st.set_page_config(
     page_title="Deepfake Defender",
     page_icon="🛡️",
@@ -15,7 +12,7 @@ st.set_page_config(
 
 # --- Global page title ---
 st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
-st.markdown("---")  # optional horizontal line below title
+st.markdown("---")  # optional horizontal line
 
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
@@ -23,30 +20,28 @@ tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 # --- Tab 1: Upload & Detect (with AI scan) ---
 with tab1:
     st.header("Upload a File to Detect Deepfake")
-    uploaded_file = st.file_uploader("Choose an image or video...", type=["jpg", "png", "mp4"])
-    
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
+
     if uploaded_file is not None:
         st.image(uploaded_file, use_container_width=True)
-        
-        # Convert uploaded file to OpenCV image
-        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-        
-        if uploaded_file.type.startswith("image/"):
+
+        try:
+            import numpy as np
+            import cv2
+            from deepface import DeepFace
+
+            # Convert uploaded file to OpenCV image
+            file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
             img = cv2.imdecode(file_bytes, 1)
-            
-            try:
-                # Simple analysis using DeepFace
-                analysis = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
-                
-                st.write("✅ Image analyzed!")
-                st.write("Detected dominant emotion:", analysis['dominant_emotion'])
-                st.info("Tip: Check for unnatural facial features, distortions, or inconsistencies—possible AI.")
-                
-            except Exception as e:
-                st.error("Could not analyze the image automatically. Try a different image.")
-        
-        elif uploaded_file.type.startswith("video/"):
-            st.info("Video detection not yet implemented. Upload an image for automatic analysis.")
+
+            # Run DeepFace analysis (emotion as proxy for AI detection)
+            analysis = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
+            st.write("✅ Image analyzed!")
+            st.write("Detected dominant emotion:", analysis['dominant_emotion'])
+            st.info("Tip: Check for unnatural facial features, distortions, or inconsistencies—possible AI.")
+
+        except Exception as e:
+            st.error("Could not analyze the image. Error: " + str(e))
 
 # --- Tab 2: Mini-Game ---
 with tab2:
@@ -55,7 +50,6 @@ with tab2:
     ai_folder = "ai_faces"
     real_folder = "real_faces"
 
-    # Check folders
     if not os.path.exists(ai_folder) or not os.path.exists(real_folder):
         st.error("AI or Real images folder not found. Make sure 'ai_faces' and 'real_faces' exist with images inside.")
     else:
@@ -141,7 +135,6 @@ with tab2:
                 # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
                     if st.button("New Challenge"):
-                        # Clear images for next round
                         st.session_state.left_img = None
                         st.session_state.right_img = None
                         st.session_state.round_active = False
