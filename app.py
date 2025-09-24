@@ -10,6 +10,10 @@ st.set_page_config(
     layout="centered"
 )
 
+# --- Global page title ---
+st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
+st.markdown("---")  # optional horizontal line below title
+
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
@@ -23,7 +27,6 @@ with tab1:
 
 # --- Tab 2: Mini-Game ---
 with tab2:
-    st.markdown("<h1 style='text-align: center;'>Deepfake Defender — Mini-Game</h1>", unsafe_allow_html=True)
     st.write("Guess which image is AI-generated!")
 
     ai_folder = "ai_faces"
