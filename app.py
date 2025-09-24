@@ -1,8 +1,23 @@
-import os
+import streamlit as st
 from PIL import Image
+import os
 import random
 
-# --- Mini-Game tab ---
+st.set_page_config(page_title="Deepfake Defender", layout="wide")
+
+# --- Define Tabs ---
+tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
+
+# --- Tab 1: Upload & Detect ---
+with tab1:
+    st.header("Upload a File to Detect Deepfake")
+    uploaded_file = st.file_uploader("Choose an image or video...", type=["jpg", "png", "mp4"])
+    
+    if uploaded_file is not None:
+        st.write("File uploaded! You can implement detection here.")
+        st.image(uploaded_file, use_container_width=True)
+
+# --- Tab 2: Mini-Game ---
 with tab2:
     st.header("Mini-Game — Spot the AI image")
     st.write("Guess which image is AI-generated!")
@@ -11,7 +26,7 @@ with tab2:
     ai_folder = "assets/ai_faces"
     real_folder = "assets/real_faces"
 
-    # Get list of image filenames
+    # List image filenames
     ai_images = os.listdir(ai_folder)
     real_images = os.listdir(real_folder)
 
@@ -40,14 +55,14 @@ with tab2:
             st.session_state.left_img = real_img
             st.session_state.right_img = ai_img
 
-    # Display images
+    # Display images in columns
     col1, col2 = st.columns(2)
     with col1:
         st.image(st.session_state.left_img, caption="Left", use_container_width=True)
     with col2:
         st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-    # Guess
+    # Guess radio button
     guess = st.radio("Which is AI-generated?", ["Left", "Right"])
     if st.button("Submit Guess"):
         correct = "Left" if st.session_state.left_is_fake else "Right"
@@ -56,3 +71,13 @@ with tab2:
             st.success("Correct! 🎉")
         else:
             st.error(f"Wrong — the AI image was on the **{correct}**.")
+
+# --- Tab 3: Tips & Safety ---
+with tab3:
+    st.header("Tips & Safety")
+    st.write("""
+    - Always be cautious with online AI tools and deepfake content.
+    - Protect your personal photos and videos.
+    - Learn to spot deepfakes using visual cues or detection tools.
+    - Remember: AI can be used both creatively and maliciously.
+    """)
