@@ -3,6 +3,7 @@ from PIL import Image
 import os
 import random
 import numpy as np
+import deepface
 
 # --- Page config ---
 st.set_page_config(
@@ -27,15 +28,13 @@ with tab1:
         st.image(uploaded_file, use_container_width=True)
 
         try:
-            from deepface import DeepFace
-
-            # Convert uploaded file to numpy array via PIL
             pil_img = Image.open(uploaded_file).convert("RGB")
             img = np.array(pil_img)
 
-            # Run DeepFace analysis (emotion as proxy for AI detection)
-            analysis = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
-            st.write("✅ Image analyzed!")
+            with st.spinner('Scanning for AI artifacts...'):
+                analysis = deepface.DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
+
+            st.success("✅ Image analyzed!")
             st.write("Detected dominant emotion:", analysis['dominant_emotion'])
             st.info("Tip: Check for unnatural facial features, distortions, or inconsistencies—possible AI.")
 
