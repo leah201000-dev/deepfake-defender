@@ -3,8 +3,12 @@ from PIL import Image
 import os
 import random
 
-# --- Page config ---
-st.set_page_config(page_title="Deepfake Defender", layout="centered")
+# --- Page config (must be first Streamlit command) ---
+st.set_page_config(
+    page_title="Deepfake Defender",  # Browser tab title
+    page_icon="🛡️",
+    layout="centered"
+)
 
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
@@ -19,7 +23,7 @@ with tab1:
 
 # --- Tab 2: Mini-Game ---
 with tab2:
-    st.header("Mini-Game — Spot the AI image")
+    st.markdown("<h1 style='text-align: center;'>Deepfake Defender — Mini-Game</h1>", unsafe_allow_html=True)
     st.write("Guess which image is AI-generated!")
 
     ai_folder = "ai_faces"
@@ -106,7 +110,7 @@ with tab2:
                             st.session_state.guess_submitted = True
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
-                            # Do NOT change round_active or guess_submitted — must guess correctly
+                            # Must guess correctly, round_active remains True
 
                 # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
