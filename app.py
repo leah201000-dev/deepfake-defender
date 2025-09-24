@@ -2,10 +2,13 @@ import streamlit as st
 from PIL import Image
 import os
 import random
+import numpy as np
+import cv2
+from deepface import DeepFace
 
 # --- Page config (must be first Streamlit command) ---
 st.set_page_config(
-    page_title="Deepfake Defender",  # Browser tab title
+    page_title="Deepfake Defender",
     page_icon="🛡️",
     layout="centered"
 )
@@ -17,13 +20,33 @@ st.markdown("---")  # optional horizontal line below title
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
-# --- Tab 1: Upload & Detect ---
+# --- Tab 1: Upload & Detect (with AI scan) ---
 with tab1:
     st.header("Upload a File to Detect Deepfake")
     uploaded_file = st.file_uploader("Choose an image or video...", type=["jpg", "png", "mp4"])
+    
     if uploaded_file is not None:
-        st.write("File uploaded! You can implement detection here.")
         st.image(uploaded_file, use_container_width=True)
+        
+        # Convert uploaded file to OpenCV image
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        
+        if uploaded_file.type.startswith("image/"):
+            img = cv2.imdecode(file_bytes, 1)
+            
+            try:
+                # Simple analysis using DeepFace
+                analysis = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
+                
+                st.write("✅ Image analyzed!")
+                st.write("Detected dominant emotion:", analysis['dominant_emotion'])
+                st.info("Tip: Check for unnatural facial features, distortions, or inconsistencies—possible AI.")
+                
+            except Exception as e:
+                st.error("Could not analyze the image automatically. Try a different image.")
+        
+        elif uploaded_file.type.startswith("video/"):
+            st.info("Video detection not yet implemented. Upload an image for automatic analysis.")
 
 # --- Tab 2: Mini-Game ---
 with tab2:
