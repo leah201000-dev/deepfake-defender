@@ -39,50 +39,65 @@ with tab2:
         if len(ai_images) == 0 or len(real_images) == 0:
             st.warning("No images found in one of the folders.")
         else:
-            # Initialize session state
-            if "left_is_fake" not in st.session_state:
-                st.session_state.left_is_fake = random.choice([True, False])
-                st.session_state.left_img = None
-                st.session_state.right_img = None
+            # Initialize decks in session state
+            if "ai_deck" not in st.session_state:
+                st.session_state.ai_deck = ai_images.copy()
+            if "real_deck" not in st.session_state:
+                st.session_state.real_deck = real_images.copy()
 
-            if st.button("New Challenge"):
-                st.session_state.left_is_fake = random.choice([True, False])
-                st.session_state.left_img = None
-                st.session_state.right_img = None
+            # Check if decks are empty (end of game)
+            if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
+                st.success("🎉 You’ve completed all challenges! Great job!")
 
-            # Pick images if not already chosen
-            if st.session_state.left_img is None or st.session_state.right_img is None:
-                ai_img_name = random.choice(ai_images)
-                # Ensure the real image is not the same filename (just in case)
-                real_img_name = random.choice([img for img in real_images if img != ai_img_name])
+                # List of tips/hints for next time
+                tips = [
+                    "Check for unnatural shadows or inconsistent lighting.",
+                    "Look closely at the eyes — AI-generated faces often have asymmetrical reflections.",
+                    "Check hair and ears — AI sometimes messes up fine details.",
+                    "If something feels off, it might be AI-generated.",
+                    "Use multiple sources when verifying content online.",
+                    "AI often struggles with text or logos in images."
+                ]
+                st.info("Tip: " + random.choice(tips))
+            else:
+                # Pick random images from decks
+                ai_img_name = random.choice(st.session_state.ai_deck)
+                st.session_state.ai_deck.remove(ai_img_name)
+
+                real_img_name = random.choice(st.session_state.real_deck)
+                st.session_state.real_deck.remove(real_img_name)
 
                 ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
                 real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
                 # Randomize left/right
-                if st.session_state.left_is_fake:
-                    st.session_state.left_img = ai_img
-                    st.session_state.right_img = real_img
+                left_is_fake = random.choice([True, False])
+                if left_is_fake:
+                    left_img = ai_img
+                    right_img = real_img
                 else:
-                    st.session_state.left_img = real_img
-                    st.session_state.right_img = ai_img
+                    left_img = real_img
+                    right_img = ai_img
 
-            # Display images in equal columns
-            col1, col2 = st.columns([1,1])
-            with col1:
-                st.image(st.session_state.left_img, caption="Left", use_container_width=True)
-            with col2:
-                st.image(st.session_state.right_img, caption="Right", use_container_width=True)
+                # Display images
+                col1, col2 = st.columns([1,1])
+                with col1:
+                    st.image(left_img, caption="Left", use_container_width=True)
+                with col2:
+                    st.image(right_img, caption="Right", use_container_width=True)
 
-            # Guess radio button
-            guess = st.radio("Which is AI-generated?", ["Left", "Right"])
-            if st.button("Submit Guess"):
-                correct = "Left" if st.session_state.left_is_fake else "Right"
-                if guess == correct:
-                    st.balloons()
-                    st.success("Correct! 🎉")
-                else:
-                    st.error(f"Wrong — the AI image was on the **{correct}**.")
+                # Guess radio button
+                guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+                if st.button("Submit Guess"):
+                    correct = "Left" if left_is_fake else "Right"
+                    if guess == correct:
+                        st.balloons()
+                        st.success("Correct! 🎉")
+                    else:
+                        st.error(f"Wrong — the AI image was on the **{correct}**.")
+
+                if st.button("New Challenge"):
+                    st.experimental_rerun()
 
 # --- Tab 3: Tips & Safety ---
 with tab3:
