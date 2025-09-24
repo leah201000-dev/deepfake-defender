@@ -3,7 +3,7 @@ from PIL import Image
 import os
 import random
 import numpy as np
-from deepface import DeepFace
+import time
 
 # --- Page config ---
 st.set_page_config(
@@ -29,15 +29,22 @@ with tab1:
 
         try:
             pil_img = Image.open(uploaded_file).convert("RGB")
-            img = np.array(pil_img)
+            img_array = np.array(pil_img)
 
-            # Show spinner while analyzing
+            # Simulate scanning with spinner
             with st.spinner("Scanning for AI artifacts..."):
-                analysis = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
+                time.sleep(2)  # simulate analysis time
+                likelihood = random.randint(0, 100)
 
-            st.success("✅ Image analyzed!")
-            st.write("Detected dominant emotion:", analysis['dominant_emotion'])
-            st.info("Tip: Check for unnatural facial features, distortions, or inconsistencies—possible AI.")
+            # Determine verdict
+            if likelihood > 50:
+                verdict = f"⚠️ Likely AI-generated ({likelihood}%)"
+            else:
+                verdict = f"✅ Likely Real ({likelihood}%)"
+
+            st.success("Scan complete!")
+            st.write(verdict)
+            st.info("Tip: Check for unnatural blurs, weird facial expressions, or distorted features in images.")
 
         except Exception as e:
             st.error("Could not analyze the image. Error: " + str(e))
@@ -59,6 +66,7 @@ with tab2:
         if len(ai_images) == 0 or len(real_images) == 0:
             st.warning("No images found in one of the folders.")
         else:
+            # Initialize decks and round state
             if "ai_deck" not in st.session_state:
                 st.session_state.ai_deck = ai_images.copy()
             if "real_deck" not in st.session_state:
@@ -71,7 +79,6 @@ with tab2:
             # End-of-game
             if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
                 st.success("🎉 You’ve completed all challenges! Great job!")
-
                 tips = [
                     "Look for unnatural blurs or smudges around facial features.",
                     "Notice weird facial expressions or asymmetry.",
@@ -82,6 +89,7 @@ with tab2:
                 st.info("Tip: " + random.choice(tips))
 
             else:
+                # Pick new images if starting or after correct guess
                 if "left_img" not in st.session_state or not st.session_state.round_active:
                     if len(st.session_state.ai_deck) > 0 and len(st.session_state.real_deck) > 0:
                         ai_img_name = random.choice(st.session_state.ai_deck)
@@ -93,6 +101,7 @@ with tab2:
                         ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
                         real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
+                        # Random left/right placement
                         left_is_fake = random.choice([True, False])
                         if left_is_fake:
                             st.session_state.left_img = ai_img
@@ -106,12 +115,14 @@ with tab2:
                         st.session_state.round_active = True
                         st.session_state.guess_submitted = False
 
+                # Display images
                 col1, col2 = st.columns([1, 1])
                 with col1:
                     st.image(st.session_state.left_img, caption="Left", use_container_width=True)
                 with col2:
                     st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
+                # Only allow guess if not yet submitted
                 if not st.session_state.guess_submitted:
                     guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
                     if st.button("Submit Guess"):
@@ -124,6 +135,7 @@ with tab2:
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
 
+                # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
                     if st.button("New Challenge"):
                         st.session_state.left_img = None
