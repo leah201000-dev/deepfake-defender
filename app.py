@@ -51,12 +51,11 @@ with tab2:
                 st.success("🎉 You’ve completed all challenges! Great job!")
 
                 tips = [
-                    "Check for unnatural shadows or inconsistent lighting.",
-                    "Look closely at the eyes — AI-generated faces often have asymmetrical reflections.",
-                    "Check hair and ears — AI sometimes messes up fine details.",
-                    "If something feels off, it might be AI-generated.",
-                    "Use multiple sources when verifying content online.",
-                    "AI often struggles with text or logos in images."
+                    "Look for unnatural blurs or smudges around facial features.",
+                    "Notice weird facial expressions or asymmetry.",
+                    "Check for distorted or misaligned facial proportions.",
+                    "Eyes, ears, and teeth can sometimes appear distorted in AI images.",
+                    "Shadows and lighting might look unnatural or inconsistent."
                 ]
                 st.info("Tip: " + random.choice(tips))
 
@@ -73,6 +72,7 @@ with tab2:
                         ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
                         real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
+                        # Proper random left/right placement
                         left_is_fake = random.choice([True, False])
                         if left_is_fake:
                             st.session_state.left_img = ai_img
