@@ -5,7 +5,6 @@ import numpy as np
 import io
 import requests
 import random
-import os
 
 st.set_page_config(page_title="Deepfake Defender", layout="centered")
 
@@ -24,7 +23,6 @@ def ela_image_pil(pil_im, quality=90):
     Error Level Analysis (ELA) — simple heuristic for detecting edits.
     Returns (ela_image (PIL), mean_difference_score (float))
     """
-    # Recompress to JPEG in memory
     with io.BytesIO() as f:
         pil_im.save(f, "JPEG", quality=quality)
         f.seek(0)
@@ -38,7 +36,6 @@ def ela_image_pil(pil_im, quality=90):
     max_val = diff_np.max()
     if max_val == 0:
         max_val = 1
-    # scale difference to full 0-255 for visual ELA image
     ela_np = np.clip((diff_np.astype("float32") * (255.0 / float(max_val))), 0, 255).astype("uint8")
     ela_img = Image.fromarray(ela_np)
     mean_diff = float(diff_np.mean())
@@ -47,15 +44,13 @@ def ela_image_pil(pil_im, quality=90):
 def score_to_likelihood(mean_diff):
     """
     Convert mean ELA diff -> rough 'manipulation likelihood' percentage.
-    Heuristic: larger mean_diff => more likely edited.
-    Tune divisor (15.0) later if needed.
     """
     likelihood = min(100.0, (mean_diff / 15.0) * 100.0)
     return likelihood
 
 # --- UI ---
 st.title("Deepfake Defender")
-st.write("Use AI tools to *detect* possible manipulations and learn how to protect identity & creativity online.")
+st.write("Use AI tools to detect possible manipulations and learn how to protect your identity & creativity online.")
 
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
@@ -63,6 +58,7 @@ tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 with tab1:
     st.header("Upload an image for a quick manipulation check (ELA)")
     uploaded_file = st.file_uploader("Upload an image file (png, jpg, jpeg)", type=["png","jpg","jpeg"])
+    
     if uploaded_file is not None:
         try:
             img = Image.open(uploaded_file).convert("RGB")
@@ -72,3 +68,60 @@ with tab1:
                 ela_img, mean_diff = ela_image_pil(img, quality=90)
                 likelihood = score_to_likelihood(mean_diff)
                 verdict = "Likely manipulated" if likelihood > 30 else "Likely real / no strong edit signature"
+
+            st.markdown(f"**Detection verdict:** {verdict}")
+            st.metric("Manipulation likelihood", f"{likelihood:.0f}%")
+            st.write("ELA (bright areas may indicate edits):")
+            st.image(ela_img, use_column_width=True)
+
+        except Exception as e:
+            st.error("Sorry — couldn't process that image. Try a different file.")
+            st.exception(e)
+
+# ---------------- Tab 2: Mini-Game ----------------
+with tab2:
+    st.header("Mini-Game — Spot the AI image")
+    st.write("You will see two images: one AI-generated and one real. Guess which one is AI-generated.")
+
+    if "left_is_fake" not in st.session_state:
+        st.session_state.left_is_fake = random.choice([True, False])
+        st.session_state.seed = random.randint(1, 99999)
+
+    if st.button("New Challenge"):
+        st.session_state.left_is_fake = random.choice([True, False])
+        st.session_state.seed = random.randint(1, 99999)
+
+    fake_url = "https://thispersondoesnotexist.com/image"
+    real_url = f"https://picsum.photos/seed/{st.session_state.seed}/400/300"
+
+    if st.session_state.left_is_fake:
+        left_url, right_url = fake_url, real_url
+    else:
+        left_url, right_url = real_url, fake_url
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(left_url, caption="Left", use_column_width=True)
+    with col2:
+        st.image(right_url, caption="Right", use_column_width=True)
+
+    guess = st.radio("Which is AI-generated?", options=["Left", "Right"])
+    if st.button("Submit Guess"):
+        was_left_fake = st.session_state.left_is_fake
+        correct_side = "Left" if was_left_fake else "Right"
+        if guess == correct_side:
+            st.balloons()
+            st.success("Correct! 🎉")
+        else:
+            st.error(f"Not quite — the AI-generated image was on the **{correct_side}**.")
+
+# ---------------- Tab 3: Tips & Safety ----------------
+with tab3:
+    st.header("Tips & Safety — Protect your identity and creativity")
+    st.write("""
+    **Quick safety tips**
+    - Keep private voice recordings off public sites.
+    - Use subtle watermarks on published artwork.
+    - Verify sources: if you see a shocking video, check trustworthy outlets.
+    - Keep raw high-quality originals offline or private.
+    """)
