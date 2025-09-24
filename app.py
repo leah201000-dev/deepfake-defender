@@ -16,16 +16,19 @@ with tab2:
         st.session_state.left_img = None
         st.session_state.right_img = None
 
-    # Retry function
+    # Retry loader
     def load_image_with_retry(url, retries=5):
         for _ in range(retries):
             try:
-                return load_image_from_url(url)
+                headers = {"User-Agent": "Mozilla/5.0"}
+                r = requests.get(url, headers=headers, timeout=10)
+                r.raise_for_status()
+                return Image.open(io.BytesIO(r.content)).convert("RGB")
             except:
                 continue
         return None
 
-    # Only load images if not cached
+    # Load images if not already cached
     if st.session_state.left_img is None or st.session_state.right_img is None:
         fake_url = "https://thispersondoesnotexist.com/image"
         real_url = f"https://picsum.photos/seed/{st.session_state.seed}/400/300"
@@ -43,12 +46,12 @@ with tab2:
         if st.session_state.left_img is not None:
             st.image(st.session_state.left_img, caption="Left", use_container_width=True)
         else:
-            st.write("Failed to load left image. Try 'New Challenge'.")
+            st.write("Left image failed to load. Click 'New Challenge'.")
     with col2:
         if st.session_state.right_img is not None:
             st.image(st.session_state.right_img, caption="Right", use_container_width=True)
         else:
-            st.write("Failed to load right image. Try 'New Challenge'.")
+            st.write("Right image failed to load. Click 'New Challenge'.")
 
     guess = st.radio("Which is AI-generated?", options=["Left", "Right"])
     if st.button("Submit Guess"):
