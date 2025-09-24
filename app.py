@@ -1,9 +1,7 @@
-# app.py — Deepfake Defender (starter with ELA image check + mini-game)
 import streamlit as st
 from PIL import Image
 import numpy as np
 import io
-import requests
 import random
 
 st.set_page_config(page_title="Deepfake Defender", layout="centered")
@@ -11,12 +9,6 @@ st.set_page_config(page_title="Deepfake Defender", layout="centered")
 # --- helper functions ---
 def load_image_from_bytes(bytes_data):
     return Image.open(io.BytesIO(bytes_data)).convert("RGB")
-
-def load_image_from_url(url):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    r = requests.get(url, headers=headers, timeout=10)
-    r.raise_for_status()
-    return load_image_from_bytes(r.content)
 
 def ela_image_pil(pil_im, quality=90):
     """
@@ -62,7 +54,7 @@ with tab1:
     if uploaded_file is not None:
         try:
             img = Image.open(uploaded_file).convert("RGB")
-            st.image(img, caption="Uploaded image", use_column_width=True)
+            st.image(img, caption="Uploaded image", use_container_width=True)
 
             with st.spinner("Running quick analysis..."):
                 ela_img, mean_diff = ela_image_pil(img, quality=90)
@@ -72,7 +64,7 @@ with tab1:
             st.markdown(f"**Detection verdict:** {verdict}")
             st.metric("Manipulation likelihood", f"{likelihood:.0f}%")
             st.write("ELA (bright areas may indicate edits):")
-            st.image(ela_img, use_column_width=True)
+            st.image(ela_img, use_container_width=True)
 
         except Exception as e:
             st.error("Sorry — couldn't process that image. Try a different file.")
@@ -83,32 +75,33 @@ with tab2:
     st.header("Mini-Game — Spot the AI image")
     st.write("You will see two images: one AI-generated and one real. Guess which one is AI-generated.")
 
+    # Initialize session state placeholders for your own images
     if "left_is_fake" not in st.session_state:
-        st.session_state.left_is_fake = random.choice([True, False])
-        st.session_state.seed = random.randint(1, 99999)
+        st.session_state.left_is_fake = True
+        st.session_state.left_image = None  # assign your own PIL image later
+        st.session_state.right_image = None
 
     if st.button("New Challenge"):
         st.session_state.left_is_fake = random.choice([True, False])
-        st.session_state.seed = random.randint(1, 99999)
-
-    fake_url = "https://thispersondoesnotexist.com/image"
-    real_url = f"https://picsum.photos/seed/{st.session_state.seed}/400/300"
-
-    if st.session_state.left_is_fake:
-        left_url, right_url = fake_url, real_url
-    else:
-        left_url, right_url = real_url, fake_url
+        # Update left_image and right_image with your own images when ready
+        st.session_state.left_image = None
+        st.session_state.right_image = None
 
     col1, col2 = st.columns(2)
     with col1:
-        st.image(left_url, caption="Left", use_column_width=True)
+        if st.session_state.left_image is not None:
+            st.image(st.session_state.left_image, caption="Left", use_container_width=True)
+        else:
+            st.write("Left image placeholder")
     with col2:
-        st.image(right_url, caption="Right", use_column_width=True)
+        if st.session_state.right_image is not None:
+            st.image(st.session_state.right_image, caption="Right", use_container_width=True)
+        else:
+            st.write("Right image placeholder")
 
     guess = st.radio("Which is AI-generated?", options=["Left", "Right"])
     if st.button("Submit Guess"):
-        was_left_fake = st.session_state.left_is_fake
-        correct_side = "Left" if was_left_fake else "Right"
+        correct_side = "Left" if st.session_state.left_is_fake else "Right"
         if guess == correct_side:
             st.balloons()
             st.success("Correct! 🎉")
