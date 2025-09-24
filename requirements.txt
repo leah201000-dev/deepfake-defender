@@ -1,3 +1,5 @@
 streamlit
 Pillow
 numpy
+tensorflow==2.13.0  # match DeepSafe requirements
+opencv-python-headless
