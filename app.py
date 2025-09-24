@@ -23,7 +23,7 @@ with tab2:
     st.header("Mini-Game — Spot the AI image")
     st.write("Guess which image is AI-generated!")
 
-    # Paths to image folders (directly under root)
+    # Paths to image folders
     ai_folder = "ai_faces"
     real_folder = "real_faces"
 
@@ -53,10 +53,13 @@ with tab2:
             # Pick images if not already chosen
             if st.session_state.left_img is None or st.session_state.right_img is None:
                 ai_img_name = random.choice(ai_images)
-                real_img_name = random.choice(real_images)
+                # Ensure the real image is not the same filename (just in case)
+                real_img_name = random.choice([img for img in real_images if img != ai_img_name])
+
                 ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
                 real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
+                # Randomize left/right
                 if st.session_state.left_is_fake:
                     st.session_state.left_img = ai_img
                     st.session_state.right_img = real_img
