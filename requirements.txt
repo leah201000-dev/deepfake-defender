@@ -1,6 +1,6 @@
 streamlit
 Pillow
-deepface
+deepface==0.0.75
 opencv-python-headless
 numpy
 tensorflow
