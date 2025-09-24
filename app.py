@@ -2,6 +2,7 @@ import streamlit as st
 from PIL import Image
 import os
 import random
+import numpy as np
 
 # --- Page config ---
 st.set_page_config(
@@ -12,12 +13,12 @@ st.set_page_config(
 
 # --- Global page title ---
 st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
-st.markdown("---")  # optional horizontal line
+st.markdown("---")
 
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
-# --- Tab 1: Upload & Detect (with AI scan) ---
+# --- Tab 1: Upload & Detect ---
 with tab1:
     st.header("Upload a File to Detect Deepfake")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
@@ -26,13 +27,11 @@ with tab1:
         st.image(uploaded_file, use_container_width=True)
 
         try:
-            import numpy as np
-            import cv2
             from deepface import DeepFace
 
-            # Convert uploaded file to OpenCV image
-            file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-            img = cv2.imdecode(file_bytes, 1)
+            # Convert uploaded file to numpy array via PIL
+            pil_img = Image.open(uploaded_file).convert("RGB")
+            img = np.array(pil_img)
 
             # Run DeepFace analysis (emotion as proxy for AI detection)
             analysis = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
@@ -130,7 +129,6 @@ with tab2:
                             st.session_state.guess_submitted = True
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
-                            # Must guess correctly, round_active remains True
 
                 # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
