@@ -1,5 +1,84 @@
-body { font-family: Arial, sans-serif; text-align: center; padding: 2em; background: #f2f2f2; }
-header { background: #4a90e2; color: white; padding: 1em; border-radius: 10px; }
-a { background: #f39c12; color: white; padding: 0.5em 1em; text-decoration: none; border-radius: 5px; }
-section { margin: 2em 0; }
-footer { margin-top: 3em; color: #555; }
+import streamlit as st
+from PIL import Image, ImageOps, ImageEnhance
+import os
+import random
+
+# --- Page config ---
+st.set_page_config(
+    page_title="Deepfake Defender 🛡️ — 2025–2026 GWC Competition",
+    page_icon="🛡️",
+    layout="centered"
+)
+
+# --- Custom CSS for cute aesthetic ---
+st.markdown(
+    """
+    <style>
+    /* --- Body and fonts --- */
+    body {
+        background: linear-gradient(135deg, #ffe6f0, #fff0f5);
+        font-family: 'Comic Sans MS', 'Arial', sans-serif;
+        text-align: center;
+        padding: 2em;
+        animation: backgroundShift 15s ease infinite;
+    }
+
+    @keyframes backgroundShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    /* --- Headers --- */
+    h1, h2, h3 {
+        color: #ff66b2;
+        text-shadow: 2px 2px 5px #ffccdd;
+        animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+        from { text-shadow: 2px 2px 5px #ff99cc; }
+        to { text-shadow: 2px 2px 20px #ff66b2; }
+    }
+
+    /* --- Buttons --- */
+    div.stButton > button {
+        background: #ff99cc;
+        color: white;
+        border-radius: 15px;
+        padding: 0.6em 1.2em;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    div.stButton > button:hover {
+        background: #ff66b2;
+        transform: scale(1.1);
+        box-shadow: 0px 4px 15px rgba(255,102,178,0.6);
+    }
+
+    /* --- File uploader --- */
+    div.stFileUploader {
+        border: 2px dashed #ff99cc;
+        border-radius: 15px;
+        padding: 1em;
+        background-color: #fff0f5;
+    }
+
+    /* --- Images --- */
+    img {
+        border-radius: 20px;
+        box-shadow: 0px 5px 20px rgba(255,102,178,0.4);
+        transition: transform 0.3s;
+    }
+
+    img:hover {
+        transform: scale(1.05) rotate(1deg);
+    }
+
+    /* --- Tabs --- */
+    .css-1avcm0n, .stTabs [role="tablist"] button {
+        background: #ffccdd;
+        color: #ff66b2;
+        font-weight: bold;
+        bord
