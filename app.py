@@ -5,66 +5,61 @@ import random
 
 # --- Page config ---
 st.set_page_config(
-    page_title="Deepfake Defender",
+    page_title="Deepfake Defender 🛡️ — AI Powered",
     page_icon="🛡️",
     layout="centered"
 )
 
 # --- Global page title ---
-st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Deepfake Defender 🛡️ — AI Powered</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- Tabs ---
-tab1, tab2, tab3 = st.tabs(["Image Playground", "Mini-Game", "Tips & Safety"])
+tab1, tab2, tab3 = st.tabs(["AI Playground", "Mini-Game", "Tips & Safety"])
 
-# --- Tab 1: Image Playground ---
+# --- Tab 1: AI Playground ---
 with tab1:
-    st.header("Upload & Play with Your Image")
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    st.header("AI Playground — Experiment with Images")
+    uploaded_file = st.file_uploader("Upload an image to experiment with:", type=["jpg", "png"])
 
-    if uploaded_file is not None:
+    if uploaded_file:
         img = Image.open(uploaded_file)
         st.image(img, caption="Original Image", use_container_width=True)
 
-        st.subheader("Manipulation Options")
+        # Transform options
+        st.subheader("Image Transformations")
+        col1, col2 = st.columns(2)
 
-        # Flip options
-        flip_option = st.selectbox("Flip Image:", ["None", "Horizontal", "Vertical"])
-        if flip_option == "Horizontal":
+        with col1:
+            if st.checkbox("Convert to Grayscale"):
+                img = ImageOps.grayscale(img)
+            if st.checkbox("Invert Colors"):
+                img = ImageOps.invert(img.convert("RGB"))
+
+        with col2:
+            brightness = st.slider("Adjust Brightness", 0.5, 2.0, 1.0)
+            contrast = st.slider("Adjust Contrast", 0.5, 2.0, 1.0)
+            img = ImageEnhance.Brightness(img).enhance(brightness)
+            img = ImageEnhance.Contrast(img).enhance(contrast)
+
+        # Flip and rotate options
+        flip_h = st.checkbox("Flip Horizontally")
+        flip_v = st.checkbox("Flip Vertically")
+        rotate = st.slider("Rotate Degrees", 0, 360, 0)
+
+        if flip_h:
             img = ImageOps.mirror(img)
-        elif flip_option == "Vertical":
+        if flip_v:
             img = ImageOps.flip(img)
+        if rotate != 0:
+            img = img.rotate(rotate)
 
-        # Rotation
-        rotate_angle = st.slider("Rotate Image (degrees):", 0, 360, 0)
-        if rotate_angle != 0:
-            img = img.rotate(rotate_angle, expand=True)
-
-        # Color filters
-        color_filter = st.selectbox("Color Filter:", ["None", "Grayscale", "Invert", "Sepia"])
-        if color_filter == "Grayscale":
-            img = ImageOps.grayscale(img)
-        elif color_filter == "Invert":
-            img = ImageOps.invert(img.convert("RGB"))
-        elif color_filter == "Sepia":
-            gray = ImageOps.grayscale(img)
-            sepia = ImageOps.colorize(gray, "#704214", "#C0A080")
-            img = sepia
-
-        # Brightness/Contrast
-        brightness = st.slider("Brightness:", 0.5, 2.0, 1.0)
-        contrast = st.slider("Contrast:", 0.5, 2.0, 1.0)
-        enhancer_b = ImageEnhance.Brightness(img)
-        img = enhancer_b.enhance(brightness)
-        enhancer_c = ImageEnhance.Contrast(img)
-        img = enhancer_c.enhance(contrast)
-
-        st.image(img, caption="Manipulated Image", use_container_width=True)
+        st.subheader("Transformed Image")
+        st.image(img, use_container_width=True)
 
 # --- Tab 2: Mini-Game ---
 with tab2:
-    st.write("Guess which image is AI-generated!")
-
+    st.header("Mini-Game — Guess the AI Image")
     ai_folder = "ai_faces"
     real_folder = "real_faces"
 
@@ -79,7 +74,6 @@ with tab2:
         if len(ai_images) == 0 or len(real_images) == 0:
             st.warning("No images found in one of the folders.")
         else:
-            # Initialize decks and round state
             if "ai_deck" not in st.session_state:
                 st.session_state.ai_deck = ai_images.copy()
             if "real_deck" not in st.session_state:
@@ -110,10 +104,11 @@ with tab2:
                         real_img_name = random.choice(st.session_state.real_deck)
                         st.session_state.real_deck.remove(real_img_name)
 
-                        left_is_fake = random.choice([True, False])
                         ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
                         real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
+                        # Random left/right placement
+                        left_is_fake = random.choice([True, False])
                         if left_is_fake:
                             st.session_state.left_img = ai_img
                             st.session_state.right_img = real_img
@@ -136,13 +131,14 @@ with tab2:
                 # Only allow guess if not yet submitted
                 if not st.session_state.guess_submitted:
                     guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+
                     if st.button("Submit Guess"):
                         correct = "Left" if st.session_state.left_is_fake else "Right"
                         if guess == correct:
                             st.balloons()
                             st.success("Correct! 🎉")
-                            st.session_state.round_active = False
                             st.session_state.guess_submitted = True
+                            st.session_state.round_active = False
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
 
@@ -151,7 +147,7 @@ with tab2:
                     if st.button("New Challenge"):
                         st.session_state.left_img = None
                         st.session_state.right_img = None
-                        st.session_state.round_active = False
+                        st.session_state.round_active = True
                         st.session_state.guess_submitted = False
 
 # --- Tab 3: Tips & Safety ---
