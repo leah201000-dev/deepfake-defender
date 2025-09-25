@@ -5,13 +5,13 @@ import random
 
 # --- Page config ---
 st.set_page_config(
-    page_title="Deepfake Defender 🛡️ — AI Powered",
+    page_title="Deepfake Defender 🛡️ — 2025–2026 GWC Competition",
     page_icon="🛡️",
     layout="centered"
 )
 
 # --- Global page title ---
-st.markdown("<h1 style='text-align: center;'>Deepfake Defender 🛡️ — AI Powered</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Deepfake Defender 🛡️ — 2025–2026 GWC Competition</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- Tabs ---
