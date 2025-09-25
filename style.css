@@ -38,7 +38,7 @@ section {
     box-shadow: 0px 5px 20px rgba(255,102,178,0.3);
 }
 
-/* --- Links / Button to Streamlit --- */
+/* --- Links / Buttons --- */
 a {
     display: inline-block;
     background: #ff99cc;
