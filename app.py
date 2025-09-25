@@ -33,8 +33,9 @@ with tab1:
         # --- Lightweight AI detection ---
         def extract_features(img):
             img = img.resize((64, 64))
+            img = img.convert("RGB")
             arr = np.array(img)
-            return arr.mean(axis=(0, 1, 2))  # single scalar
+            return arr.mean()
 
         # Load images for training
         ai_folder = "ai_faces"
@@ -138,7 +139,7 @@ with tab2:
                 st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
             # Show guess only if not submitted yet
-            if not st.session_state.guess_submitted:
+            if st.session_state.round_active and not st.session_state.guess_submitted:
                 guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
                 if st.button("Submit Guess"):
                     correct = "Left" if st.session_state.left_is_fake else "Right"
@@ -146,7 +147,6 @@ with tab2:
                         st.balloons()
                         st.success("Correct! 🎉")
                         st.session_state.guess_submitted = True
-                        st.session_state.round_active = True  # keep images visible
                     else:
                         st.error(f"Wrong — try again!")
 
