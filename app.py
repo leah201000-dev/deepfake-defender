@@ -3,87 +3,55 @@ from PIL import Image
 import os
 import random
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.preprocessing.image import img_to_array
+import time
+from transformers import AutoImageProcessor, SiglipForImageClassification
+import torch
 
 # --- Page config ---
 st.set_page_config(page_title="Deepfake Defender", page_icon="🛡️", layout="centered")
 
-# --- Title ---
+# --- Load pre-trained AI detection model ---
+model_name = "prithivMLmods/deepfake-detector-model-v1"
+model = SiglipForImageClassification.from_pretrained(model_name)
+processor = AutoImageProcessor.from_pretrained(model_name)
+id2label = {0: "fake", 1: "real"}
+
+def classify_image(image):
+    image = image.convert("RGB")
+    inputs = processor(images=image, return_tensors="pt")
+
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        probs = torch.nn.functional.softmax(logits, dim=1).squeeze().tolist()
+
+    prediction = {id2label[i]: round(probs[i]*100, 1) for i in range(len(probs))}
+    return prediction
+
+# --- Global page title ---
 st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
-# --- Utility functions ---
-IMG_SIZE = (128, 128)
-
-def load_and_preprocess(img):
-    img = img.resize(IMG_SIZE)
-    arr = img_to_array(img) / 255.0
-    return arr
-
-def build_cnn_classifier():
-    base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(128, 128, 3))
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
-    x = Dense(128, activation="relu")(x)
-    output = Dense(1, activation="sigmoid")(x)
-    model = Model(inputs=base_model.input, outputs=output)
-    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
-    return model
-
-def prepare_training_data():
-    X, y = [], []
-    # Real images
-    for f in os.listdir("real_faces"):
-        try:
-            img = Image.open(os.path.join("real_faces", f)).convert("RGB")
-            X.append(load_and_preprocess(img))
-            y.append(0)
-        except:
-            pass
-    # AI images
-    for f in os.listdir("ai_faces"):
-        try:
-            img = Image.open(os.path.join("ai_faces", f)).convert("RGB")
-            X.append(load_and_preprocess(img))
-            y.append(1)
-        except:
-            pass
-    X = np.array(X)
-    y = np.array(y)
-    return X, y
-
 # --- Tab 1: Upload & Detect ---
 with tab1:
     st.header("Upload a File to Detect Deepfake")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
+    
+    if uploaded_file is not None:
+        img = Image.open(uploaded_file)
+        st.image(img, caption="Uploaded Image", use_container_width=True)
+        st.write("Scanning image...")
+        time.sleep(1.5)  # simulate scanning
 
-    if uploaded_file:
-        img = Image.open(uploaded_file).convert("RGB")
-        st.image(img, use_container_width=True)
-        st.info("Scanning image for AI...")
-
-        # Build/load model
-        if "model" not in st.session_state:
-            X_train, y_train = prepare_training_data()
-            if len(X_train) == 0:
-                st.error("No training images found in ai_faces/ or real_faces/")
-            else:
-                clf = build_cnn_classifier()
-                clf.fit(X_train, y_train, epochs=5, batch_size=8, verbose=0)
-                st.session_state.model = clf
-
-        if "model" in st.session_state:
-            model = st.session_state.model
-            x = np.expand_dims(load_and_preprocess(img), axis=0)
-            prob = model.predict(x)[0][0]
-            st.success(f"AI Probability: {prob*100:.1f}% | Real Probability: {(1-prob)*100:.1f}%")
+        try:
+            result = classify_image(img)
+            st.success("Scan complete!")
+            st.write(f"AI Detection Results: {result}")
+        except Exception as e:
+            st.error(f"Could not analyze the image. Error: {e}")
 
 # --- Tab 2: Mini-Game ---
 with tab2:
@@ -92,8 +60,9 @@ with tab2:
     ai_folder = "ai_faces"
     real_folder = "real_faces"
 
+    # Check folders
     if not os.path.exists(ai_folder) or not os.path.exists(real_folder):
-        st.error("AI or Real images folder not found.")
+        st.error("AI or Real images folder not found. Make sure 'ai_faces' and 'real_faces' exist with images inside.")
     else:
         valid_extensions = [".jpg", ".jpeg", ".png"]
         ai_images = [f for f in os.listdir(ai_folder) if os.path.splitext(f)[1].lower() in valid_extensions]
@@ -102,7 +71,7 @@ with tab2:
         if len(ai_images) == 0 or len(real_images) == 0:
             st.warning("No images found in one of the folders.")
         else:
-            # Initialize decks
+            # Initialize session state
             if "ai_deck" not in st.session_state:
                 st.session_state.ai_deck = ai_images.copy()
             if "real_deck" not in st.session_state:
@@ -114,7 +83,7 @@ with tab2:
 
             # End-of-game
             if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
-                st.success("🎉 You’ve completed all challenges!")
+                st.success("🎉 You’ve completed all challenges! Great job!")
                 tips = [
                     "Look for unnatural blurs or smudges around facial features.",
                     "Notice weird facial expressions or asymmetry.",
@@ -123,7 +92,6 @@ with tab2:
                     "Shadows and lighting might look unnatural or inconsistent."
                 ]
                 st.info("Tip: " + random.choice(tips))
-
             else:
                 # Pick new images if starting or after correct guess
                 if "left_img" not in st.session_state or not st.session_state.round_active:
@@ -137,6 +105,7 @@ with tab2:
                         ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
                         real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
+                        # Random left/right placement
                         left_is_fake = random.choice([True, False])
                         if left_is_fake:
                             st.session_state.left_img = ai_img
@@ -150,25 +119,26 @@ with tab2:
                         st.session_state.round_active = True
                         st.session_state.guess_submitted = False
 
+                # Display images
                 col1, col2 = st.columns([1, 1])
                 with col1:
                     st.image(st.session_state.left_img, caption="Left", use_container_width=True)
                 with col2:
                     st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-                # Guess logic
-                if st.session_state.round_active and not st.session_state.guess_submitted:
+                # Only allow guess if not yet submitted
+                if not st.session_state.guess_submitted:
                     guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
                     if st.button("Submit Guess"):
                         correct = "Left" if st.session_state.left_is_fake else "Right"
                         if guess == correct:
                             st.balloons()
                             st.success("Correct! 🎉")
-                            st.session_state.guess_submitted = True
                             st.session_state.round_active = False
+                            st.session_state.guess_submitted = True
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
-                            st.session_state.round_active = True
+                            # Must guess correctly, round_active remains True
 
                 # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
