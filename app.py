@@ -79,9 +79,11 @@ with tab2:
             st.session_state.round_active = True
         if "guess_submitted" not in st.session_state:
             st.session_state.guess_submitted = False
+        if "new_round" not in st.session_state:
+            st.session_state.new_round = True  # controls image refresh
 
-        # Pick new images only if starting new round
-        if st.session_state.left_img is None and st.session_state.round_active:
+        # Pick new images ONLY if starting new round and new_round flag is True
+        if st.session_state.left_img is None and st.session_state.round_active and st.session_state.new_round:
             ai_img_name = random.choice(st.session_state.ai_deck)
             st.session_state.ai_deck.remove(ai_img_name)
             real_img_name = random.choice(st.session_state.real_deck)
@@ -99,6 +101,8 @@ with tab2:
                 st.session_state.left_img = real_img
                 st.session_state.right_img = ai_img
                 st.session_state.left_is_fake = False
+
+            st.session_state.new_round = False  # prevent picking images again until New Challenge clicked
 
         # Display images
         col1, col2 = st.columns([1, 1])
@@ -127,6 +131,7 @@ with tab2:
                 st.session_state.right_img = None
                 st.session_state.round_active = True
                 st.session_state.guess_submitted = False
+                st.session_state.new_round = True  # allow next round to pick new images
 
         # End-of-game tips
         if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
