@@ -1,7 +1,8 @@
 import streamlit as st
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image, ImageFilter, ImageOps, ImageEnhance
 import os
 import random
+import time
 
 # --- Page config ---
 st.set_page_config(
@@ -10,7 +11,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- Global page title ---
+# --- Global title ---
 st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -20,44 +21,94 @@ tab1, tab2, tab3 = st.tabs(["AI Playground", "Mini-Game", "Tips & Safety"])
 # --- Tab 1: AI Playground ---
 with tab1:
     st.header("AI Playground / Experiment")
-    st.write("Try AI-style transformations on your images! Upload an image and see what AI could do with it.")
-    
-    uploaded_file = st.file_uploader("Upload an image (JPG/PNG)...", type=["jpg", "png"])
-    
+    st.write("Upload an image and try out different AI-style transformations!")
+
+    # Sidebar for options
+    st.sidebar.header("Options")
+    uploaded_file = st.sidebar.file_uploader("Upload image (JPG/PNG)...", type=["jpg", "png"])
+    transformation_group = st.sidebar.selectbox("Select Transformation Category:", [
+        "Color",
+        "Mirror/Flip",
+        "Stylize"
+    ])
+
+    # Sub-options
+    if transformation_group == "Color":
+        option = st.sidebar.selectbox("Select Color Effect:", [
+            "Grayscale",
+            "Invert Colors",
+            "Sepia",
+            "Solarize"
+        ])
+    elif transformation_group == "Mirror/Flip":
+        option = st.sidebar.selectbox("Select Mirror/Flip Effect:", [
+            "Mirror Horizontally",
+            "Mirror Vertically",
+            "Rotate 90°",
+            "Rotate 180°"
+        ])
+    else:  # Stylize
+        option = st.sidebar.selectbox("Select Stylize Effect:", [
+            "Edge Enhance",
+            "Emboss",
+            "Blur",
+            "Sharpen",
+            "Posterize",
+            "Pixelate"
+        ])
+
+    apply_btn = st.sidebar.button("Apply Transformation")
+
     if uploaded_file is not None:
         img = Image.open(uploaded_file).convert("RGB")
         st.subheader("Original Image")
-        st.image(img, use_container_width=True)
-        
-        st.write("Choose a transformation:")
-        option = st.selectbox("Select effect:", [
-            "Grayscale",
-            "Invert Colors",
-            "Cartoonify (Edge Enhance + Posterize)",
-            "Blur",
-            "Mirror Horizontally",
-            "Mirror Vertically"
-        ])
-        
-        if st.button("Apply Transformation"):
-            transformed = img.copy()
-            
-            if option == "Grayscale":
-                transformed = ImageOps.grayscale(transformed)
-            elif option == "Invert Colors":
-                transformed = ImageOps.invert(transformed)
-            elif option == "Cartoonify (Edge Enhance + Posterize)":
-                transformed = transformed.filter(ImageFilter.EDGE_ENHANCE)
-                transformed = ImageOps.posterize(transformed, bits=3)
-            elif option == "Blur":
-                transformed = transformed.filter(ImageFilter.GaussianBlur(3))
-            elif option == "Mirror Horizontally":
-                transformed = ImageOps.mirror(transformed)
-            elif option == "Mirror Vertically":
-                transformed = ImageOps.flip(transformed)
-            
-            st.subheader("AI-Style Transformed Image")
-            st.image(transformed, use_container_width=True)
+        st.image(img, use_column_width=True)
+
+        if apply_btn:
+            with st.spinner("Processing image..."):
+                time.sleep(0.5)  # simulate processing
+
+                transformed = img.copy()
+
+                # --- Color ---
+                if option == "Grayscale":
+                    transformed = ImageOps.grayscale(transformed)
+                elif option == "Invert Colors":
+                    transformed = ImageOps.invert(transformed)
+                elif option == "Sepia":
+                    sepia = ImageOps.colorize(ImageOps.grayscale(transformed),
+                                              black="#704214", white="#FFDAB9")
+                    transformed = sepia
+                elif option == "Solarize":
+                    transformed = ImageOps.solarize(transformed, threshold=128)
+
+                # --- Mirror/Flip/Rotate ---
+                elif option == "Mirror Horizontally":
+                    transformed = ImageOps.mirror(transformed)
+                elif option == "Mirror Vertically":
+                    transformed = ImageOps.flip(transformed)
+                elif option == "Rotate 90°":
+                    transformed = transformed.rotate(90, expand=True)
+                elif option == "Rotate 180°":
+                    transformed = transformed.rotate(180, expand=True)
+
+                # --- Stylize ---
+                elif option == "Edge Enhance":
+                    transformed = transformed.filter(ImageFilter.EDGE_ENHANCE)
+                elif option == "Emboss":
+                    transformed = transformed.filter(ImageFilter.EMBOSS)
+                elif option == "Blur":
+                    transformed = transformed.filter(ImageFilter.GaussianBlur(3))
+                elif option == "Sharpen":
+                    transformed = transformed.filter(ImageFilter.SHARPEN)
+                elif option == "Posterize":
+                    transformed = ImageOps.posterize(transformed, bits=3)
+                elif option == "Pixelate":
+                    small = transformed.resize((transformed.width // 16, transformed.height // 16), Image.NEAREST)
+                    transformed = small.resize(transformed.size, Image.NEAREST)
+
+                st.subheader("Transformed Image")
+                st.image(transformed, use_column_width=True)
 
 # --- Tab 2: Mini-Game ---
 with tab2:
@@ -147,7 +198,6 @@ with tab2:
                             st.session_state.round_active = False
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
-                            # Must guess correctly, round_active remains True
 
                 # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
@@ -167,4 +217,3 @@ with tab3:
     - Learn to spot deepfakes using visual cues or detection tools.
     - Remember: AI can be used both creatively and maliciously.
     """)
-    
