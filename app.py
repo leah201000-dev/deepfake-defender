@@ -138,28 +138,26 @@ with tab2:
             with col2:
                 st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-            # Only show Submit Guess if NOT yet submitted
+            # --- Only show guess options if not submitted ---
             if not st.session_state.guess_submitted:
                 guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
-                submit = st.button("Submit Guess")
-                if submit:
+                if st.button("Submit Guess"):
                     correct = "Left" if st.session_state.left_is_fake else "Right"
                     if guess == correct:
                         st.balloons()
                         st.success("Correct! 🎉")
                         st.session_state.guess_submitted = True
-                        st.session_state.round_active = False  # lock images until New Challenge
+                        st.session_state.round_active = False
                     else:
                         st.error("Wrong — try again! You must guess correctly to continue.")
 
-            # Show New Challenge button **only after correct guess**
+            # --- Only show New Challenge after correct guess ---
             if st.session_state.guess_submitted:
                 if st.button("New Challenge"):
                     st.session_state.left_img = None
                     st.session_state.right_img = None
                     st.session_state.round_active = True
                     st.session_state.guess_submitted = False
-
 # ---------------------------
 # Tab 3: Tips & Safety
 # ---------------------------
