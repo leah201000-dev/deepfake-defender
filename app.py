@@ -2,9 +2,6 @@ import streamlit as st
 from PIL import Image
 import os
 import random
-import numpy as np
-import cv2
-from sklearn.ensemble import RandomForestClassifier
 
 # --- Page config ---
 st.set_page_config(
@@ -25,46 +22,10 @@ tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 # ---------------------------
 with tab1:
     st.header("Upload a File to Detect Deepfake")
+    st.info("This tab is currently for uploading images only. Analysis can be added later.")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
-
     if uploaded_file is not None:
         st.image(uploaded_file, use_container_width=True)
-        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-        img = cv2.imdecode(file_bytes, 1)
-
-        try:
-            # Simple "fake detection" using mean RGB features
-            def extract_features(image: Image.Image):
-                arr = np.array(image.resize((64,64)))
-                return arr.mean(axis=(0,1,2))
-
-            X = []
-            y = []
-            for f in os.listdir("ai_faces"):
-                if f.lower().endswith((".jpg",".jpeg",".png")):
-                    X.append(extract_features(Image.open(os.path.join("ai_faces",f))))
-                    y.append(1)  # AI
-            for f in os.listdir("real_faces"):
-                if f.lower().endswith((".jpg",".jpeg",".png")):
-                    X.append(extract_features(Image.open(os.path.join("real_faces",f))))
-                    y.append(0)  # Real
-
-            X = np.array(X)
-            y = np.array(y)
-
-            clf = RandomForestClassifier()
-            clf.fit(X, y)
-
-            uploaded_features = extract_features(Image.open(uploaded_file))
-            pred = clf.predict([uploaded_features])[0]
-
-            if pred == 1:
-                st.error("⚠️ Likely AI-generated")
-            else:
-                st.success("✅ Likely real / no strong AI signature")
-
-        except Exception as e:
-            st.error(f"Could not analyze the image. Error: {e}")
 
 # ---------------------------
 # Tab 2: Mini-Game
