@@ -95,8 +95,6 @@ with tab2:
             st.session_state.round_active = True
         if "guess_submitted" not in st.session_state:
             st.session_state.guess_submitted = False
-        if "guess_container" not in st.session_state:
-            st.session_state.guess_container = st.empty()
 
         # End-of-game
         if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
@@ -110,7 +108,7 @@ with tab2:
             ]
             st.info("Tip: " + random.choice(tips))
         else:
-            # Start new challenge only if left/right images not set or after clicking New Challenge
+            # Pick new images if starting or after clicking New Challenge
             if "left_img" not in st.session_state or not st.session_state.round_active:
                 ai_img_name = random.choice(st.session_state.ai_deck)
                 st.session_state.ai_deck.remove(ai_img_name)
@@ -134,26 +132,25 @@ with tab2:
                 st.session_state.round_active = True
                 st.session_state.guess_submitted = False
 
+            # Display images side by side
             col1, col2 = st.columns([1,1])
             with col1:
                 st.image(st.session_state.left_img, caption="Left", use_container_width=True)
             with col2:
                 st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-            # --- Guess input container ---
+            # --- Display guess UI below images, only if not submitted ---
             if not st.session_state.guess_submitted:
-                with st.session_state.guess_container.container():
-                    guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
-                    if st.button("Submit Guess"):
-                        correct = "Left" if st.session_state.left_is_fake else "Right"
-                        if guess == correct:
-                            st.balloons()
-                            st.success("Correct! 🎉")
-                            st.session_state.guess_submitted = True
-                            st.session_state.round_active = False
-                            st.session_state.guess_container.empty()  # remove radio/button completely
-                        else:
-                            st.error("Wrong — try again! You must guess correctly to continue.")
+                guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+                if st.button("Submit Guess"):
+                    correct = "Left" if st.session_state.left_is_fake else "Right"
+                    if guess == correct:
+                        st.balloons()
+                        st.success("Correct! 🎉")
+                        st.session_state.guess_submitted = True
+                        st.session_state.round_active = False
+                    else:
+                        st.error("Wrong — try again! You must guess correctly to continue.")
 
             # --- New Challenge button ---
             if st.session_state.guess_submitted:
