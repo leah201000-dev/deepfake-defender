@@ -3,9 +3,7 @@ from PIL import Image
 import os
 import random
 import numpy as np
-
-# --- AI detection imports ---
-from sklearn.ensemble import RandomForestClassifier
+from tensorflow.keras.models import load_model
 
 # --- Page config ---
 st.set_page_config(
@@ -30,17 +28,12 @@ with tab1:
         try:
             img_pil = Image.open(uploaded_file).convert("RGB")
             st.image(img_pil, use_container_width=True)
-            img_np = np.array(img_pil)
+            img_np = np.array(img_pil.resize((128,128)))/255.0  # resize to model input
+            img_np = np.expand_dims(img_np, axis=0)  # batch dimension
 
-            # --- Fake AI detection using feature mean (placeholder, replace with your model) ---
-            feature = img_np.mean(axis=(0,1))  # simple placeholder feature
-            clf = RandomForestClassifier()
-            # For demo purposes, train a dummy classifier
-            # In real app, load your pre-trained model
-            X = [np.random.rand(3) for _ in range(10)]
-            y = [0,1]*5
-            clf.fit(X, y)
-            likelihood = clf.predict_proba([feature])[0][1]*100
+            # --- Load your trained DeepFake model ---
+            model = load_model("DeepFake_model.h5")
+            likelihood = float(model.predict(img_np)[0][0])*100  # percentage AI likelihood
 
             st.info(f"AI likelihood: {likelihood:.1f}%")
             if likelihood > 50:
@@ -65,7 +58,7 @@ with tab2:
     if len(ai_images) == 0 or len(real_images) == 0:
         st.warning("No images found in one of the folders.")
     else:
-        # --- Session state initialization ---
+        # --- Session state ---
         if "ai_deck" not in st.session_state:
             st.session_state.ai_deck = ai_images.copy()
         if "real_deck" not in st.session_state:
@@ -81,7 +74,7 @@ with tab2:
         if "new_round_flag" not in st.session_state:
             st.session_state.new_round_flag = False
 
-        # --- Function to set up new round ---
+        # --- New round setup ---
         def setup_new_round():
             if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
                 return
@@ -90,8 +83,8 @@ with tab2:
             real_img_name = random.choice(st.session_state.real_deck)
             st.session_state.real_deck.remove(real_img_name)
 
-            ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
-            real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
+            ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400,400))
+            real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400,400))
 
             left_is_fake = random.choice([True, False])
             if left_is_fake:
@@ -106,7 +99,7 @@ with tab2:
             st.session_state.guess_submitted = False
             st.session_state.new_round_flag = False
 
-        # Setup initial round
+        # --- Initialize round ---
         if st.session_state.left_img is None or st.session_state.right_img is None or st.session_state.new_round_flag:
             setup_new_round()
 
