@@ -3,68 +3,87 @@ from PIL import Image
 import os
 import random
 import numpy as np
-import time
-from sklearn.ensemble import RandomForestClassifier
+import tensorflow as tf
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.preprocessing.image import img_to_array
 
 # --- Page config ---
-st.set_page_config(
-    page_title="Deepfake Defender",
-    page_icon="🛡️",
-    layout="centered"
-)
+st.set_page_config(page_title="Deepfake Defender", page_icon="🛡️", layout="centered")
 
-# --- Global page title ---
+# --- Title ---
 st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
-# --- Feature extraction for simple classifier ---
-def extract_features(img):
-    img = img.resize((64, 64)).convert("RGB")
-    arr = np.array(img)
-    return arr.flatten()
+# --- Utility functions ---
+IMG_SIZE = (128, 128)
+
+def load_and_preprocess(img):
+    img = img.resize(IMG_SIZE)
+    arr = img_to_array(img) / 255.0
+    return arr
+
+def build_cnn_classifier():
+    base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(128, 128, 3))
+    x = base_model.output
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(128, activation="relu")(x)
+    output = Dense(1, activation="sigmoid")(x)
+    model = Model(inputs=base_model.input, outputs=output)
+    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+    return model
+
+def prepare_training_data():
+    X, y = [], []
+    # Real images
+    for f in os.listdir("real_faces"):
+        try:
+            img = Image.open(os.path.join("real_faces", f)).convert("RGB")
+            X.append(load_and_preprocess(img))
+            y.append(0)
+        except:
+            pass
+    # AI images
+    for f in os.listdir("ai_faces"):
+        try:
+            img = Image.open(os.path.join("ai_faces", f)).convert("RGB")
+            X.append(load_and_preprocess(img))
+            y.append(1)
+        except:
+            pass
+    X = np.array(X)
+    y = np.array(y)
+    return X, y
 
 # --- Tab 1: Upload & Detect ---
 with tab1:
     st.header("Upload a File to Detect Deepfake")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
-    
-    if uploaded_file is not None:
-        st.image(uploaded_file, use_container_width=True)
-        
-        with st.spinner("Analyzing image... 🔍"):
-            time.sleep(2)  # fake scanning delay
-            
-            try:
-                # Load training data from your folders
-                ai_folder = "ai_faces"
-                real_folder = "real_faces"
 
-                X, y = [], []
+    if uploaded_file:
+        img = Image.open(uploaded_file).convert("RGB")
+        st.image(img, use_container_width=True)
+        st.info("Scanning image for AI...")
 
-                for f in os.listdir(ai_folder):
-                    if f.lower().endswith((".jpg", ".png", ".jpeg")):
-                        X.append(extract_features(Image.open(os.path.join(ai_folder, f))))
-                        y.append("AI")
-                for f in os.listdir(real_folder):
-                    if f.lower().endswith((".jpg", ".png", ".jpeg")):
-                        X.append(extract_features(Image.open(os.path.join(real_folder, f))))
-                        y.append("Real")
+        # Build/load model
+        if "model" not in st.session_state:
+            X_train, y_train = prepare_training_data()
+            if len(X_train) == 0:
+                st.error("No training images found in ai_faces/ or real_faces/")
+            else:
+                clf = build_cnn_classifier()
+                clf.fit(X_train, y_train, epochs=5, batch_size=8, verbose=0)
+                st.session_state.model = clf
 
-                clf = RandomForestClassifier(n_estimators=100)
-                clf.fit(X, y)
-
-                feature = extract_features(Image.open(uploaded_file))
-                prediction = clf.predict([feature])[0]
-                confidence = clf.predict_proba([feature])[0].max()
-
-                st.success(f"Analysis complete! Likely **{prediction}** ({confidence*100:.1f}% confidence)")
-                st.info("Tip: Check for unnatural blurs, weird facial expressions, or facial dismorphia—possible AI.")
-
-            except Exception as e:
-                st.error(f"Could not analyze the image. Error: {e}")
+        if "model" in st.session_state:
+            model = st.session_state.model
+            x = np.expand_dims(load_and_preprocess(img), axis=0)
+            prob = model.predict(x)[0][0]
+            st.success(f"AI Probability: {prob*100:.1f}% | Real Probability: {(1-prob)*100:.1f}%")
 
 # --- Tab 2: Mini-Game ---
 with tab2:
@@ -73,18 +92,17 @@ with tab2:
     ai_folder = "ai_faces"
     real_folder = "real_faces"
 
-    # Check folders
     if not os.path.exists(ai_folder) or not os.path.exists(real_folder):
-        st.error("AI or Real images folder not found. Make sure 'ai_faces' and 'real_faces' exist with images inside.")
+        st.error("AI or Real images folder not found.")
     else:
-        valid_ext = [".jpg", ".jpeg", ".png"]
-        ai_images = [f for f in os.listdir(ai_folder) if os.path.splitext(f)[1].lower() in valid_ext]
-        real_images = [f for f in os.listdir(real_folder) if os.path.splitext(f)[1].lower() in valid_ext]
+        valid_extensions = [".jpg", ".jpeg", ".png"]
+        ai_images = [f for f in os.listdir(ai_folder) if os.path.splitext(f)[1].lower() in valid_extensions]
+        real_images = [f for f in os.listdir(real_folder) if os.path.splitext(f)[1].lower() in valid_extensions]
 
         if len(ai_images) == 0 or len(real_images) == 0:
             st.warning("No images found in one of the folders.")
         else:
-            # Initialize session state
+            # Initialize decks
             if "ai_deck" not in st.session_state:
                 st.session_state.ai_deck = ai_images.copy()
             if "real_deck" not in st.session_state:
@@ -96,7 +114,7 @@ with tab2:
 
             # End-of-game
             if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
-                st.success("🎉 You’ve completed all challenges! Great job!")
+                st.success("🎉 You’ve completed all challenges!")
                 tips = [
                     "Look for unnatural blurs or smudges around facial features.",
                     "Notice weird facial expressions or asymmetry.",
@@ -105,6 +123,7 @@ with tab2:
                     "Shadows and lighting might look unnatural or inconsistent."
                 ]
                 st.info("Tip: " + random.choice(tips))
+
             else:
                 # Pick new images if starting or after correct guess
                 if "left_img" not in st.session_state or not st.session_state.round_active:
@@ -131,27 +150,27 @@ with tab2:
                         st.session_state.round_active = True
                         st.session_state.guess_submitted = False
 
-                # Display images
                 col1, col2 = st.columns([1, 1])
                 with col1:
                     st.image(st.session_state.left_img, caption="Left", use_container_width=True)
                 with col2:
                     st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-                # Only allow guess if not yet submitted
-                if not st.session_state.guess_submitted:
+                # Guess logic
+                if st.session_state.round_active and not st.session_state.guess_submitted:
                     guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
                     if st.button("Submit Guess"):
                         correct = "Left" if st.session_state.left_is_fake else "Right"
                         if guess == correct:
                             st.balloons()
                             st.success("Correct! 🎉")
-                            st.session_state.round_active = False
                             st.session_state.guess_submitted = True
+                            st.session_state.round_active = False
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
+                            st.session_state.round_active = True
 
-                # Show New Challenge only after correct guess
+                # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
                     if st.button("New Challenge"):
                         st.session_state.left_img = None
