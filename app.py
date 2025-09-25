@@ -5,6 +5,9 @@ import random
 import numpy as np
 from tensorflow.keras.models import load_model
 
+# --- Load AI detection model ---
+model = load_model("DeepFake_model.h5")  # make sure this file is in the same folder as app.py
+
 # --- Page config ---
 st.set_page_config(
     page_title="Deepfake Defender",
@@ -26,17 +29,14 @@ with tab1:
 
     if uploaded_file is not None:
         try:
-            # Reset file pointer to start
-            uploaded_file.seek(0)
+            uploaded_file.seek(0)  # reset file pointer
             img_pil = Image.open(uploaded_file).convert("RGB")
             st.image(img_pil, use_container_width=True)
 
-            # Convert to numpy for model
+            # Convert image for AI model
             img_np = np.array(img_pil.resize((128,128)))/255.0
             img_np = np.expand_dims(img_np, axis=0)
 
-            # Load model and predict
-            model = load_model("DeepFake_model.h5")
             likelihood = float(model.predict(img_np)[0][0])*100
             st.info(f"AI likelihood: {likelihood:.1f}%")
             if likelihood > 50:
