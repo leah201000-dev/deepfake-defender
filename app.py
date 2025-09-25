@@ -138,6 +138,7 @@ with tab2:
                     st.success("Correct! 🎉")
                     st.session_state.guess_submitted = True
                     st.session_state.round_active = False
+                    # Submit Guess now disabled until New Challenge
                 else:
                     st.error(f"Wrong — try again! The AI image was not {guess}.")
 
