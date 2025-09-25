@@ -33,7 +33,7 @@ with tab1:
         img = cv2.imdecode(file_bytes, 1)
 
         try:
-            # Simple "fake detection" using mean RGB features for demo
+            # Simple "fake detection" using mean RGB features
             def extract_features(image: Image.Image):
                 arr = np.array(image.resize((64,64)))
                 return arr.mean(axis=(0,1,2))
@@ -140,8 +140,8 @@ with tab2:
             with col2:
                 st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-            # Guess only if not yet submitted
-            if not st.session_state.guess_submitted and not st.session_state.current_round_completed:
+            # Only show Submit Guess if not yet submitted
+            if not st.session_state.guess_submitted:
                 guess = st.radio("Which is AI-generated?", ["Left", "Right"], key=f"guess_{st.session_state.round_number}")
                 if st.button("Submit Guess", key=f"submit_{st.session_state.round_number}"):
                     correct = "Left" if st.session_state.left_is_fake else "Right"
@@ -150,12 +150,11 @@ with tab2:
                         st.success("Correct! 🎉")
                         st.session_state.guess_submitted = True
                         st.session_state.current_round_completed = True
-                        st.session_state.round_active = False
                     else:
-                        st.error("Wrong — try again! You must guess correctly to continue.")
+                        st.error(f"Wrong — the AI image is {correct}. You must guess correctly to continue.")
 
             # New Challenge button only appears after correct guess
-            if st.session_state.guess_submitted:
+            if st.session_state.guess_submitted and st.session_state.current_round_completed:
                 if st.button("New Challenge"):
                     st.session_state.left_img = None
                     st.session_state.right_img = None
