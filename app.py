@@ -27,21 +27,18 @@ with tab1:
     
     if uploaded_file is not None:
         st.image(uploaded_file, use_container_width=True)
-        
         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
         img = cv2.imdecode(file_bytes, 1)
         
-        # Simple feature extraction: mean color per channel
+        # Simple feature extraction
         def extract_features(img_pil):
             arr = np.array(img_pil)
             return arr.mean(axis=(0,1,2))
         
         try:
-            # Load real and AI images from folders
             real_folder = "real_faces"
             ai_folder = "ai_faces"
             valid_exts = [".jpg", ".jpeg", ".png"]
-            
             real_imgs = [f for f in os.listdir(real_folder) if os.path.splitext(f)[1].lower() in valid_exts]
             ai_imgs = [f for f in os.listdir(ai_folder) if os.path.splitext(f)[1].lower() in valid_exts]
             
@@ -91,14 +88,6 @@ with tab2:
             if key not in st.session_state:
                 st.session_state[key] = value
 
-        # Handle New Challenge click
-        if st.session_state.guess_submitted and st.button("New Challenge"):
-            st.session_state.left_img = None
-            st.session_state.right_img = None
-            st.session_state.round_active = True
-            st.session_state.guess_submitted = False
-            st.session_state.next_round = True
-
         # Pick new images if next_round is True
         if st.session_state.next_round and st.session_state.round_active:
             ai_img_name = random.choice(st.session_state.ai_deck)
@@ -120,6 +109,8 @@ with tab2:
                 st.session_state.left_is_fake = False
 
             st.session_state.next_round = False
+            st.session_state.guess_submitted = False
+            st.session_state.round_active = True
 
         # Display images
         col1, col2 = st.columns([1,1])
@@ -138,9 +129,13 @@ with tab2:
                     st.success("Correct! 🎉")
                     st.session_state.guess_submitted = True
                     st.session_state.round_active = False
-                    # Submit Guess now disabled until New Challenge
                 else:
                     st.error(f"Wrong — try again! The AI image was not {guess}.")
+
+        # Show New Challenge button if the guess was submitted
+        if st.session_state.guess_submitted:
+            if st.button("New Challenge"):
+                st.session_state.next_round = True
 
         # End-of-game tips
         if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
