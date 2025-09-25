@@ -7,6 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => heart.remove(), 10000);
     }
 
-    // spawn a new heart every 0.5s
+    // Spawn a new heart every 0.5s
     setInterval(createHeart, 500);
 });
