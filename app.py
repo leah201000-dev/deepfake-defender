@@ -3,10 +3,6 @@ from PIL import Image
 import os
 import random
 import numpy as np
-from tensorflow.keras.models import load_model
-
-# --- Load AI detection model ---
-model = load_model("DeepFake_model.h5")  # make sure this file is in the same folder as app.py
 
 # --- Page config ---
 st.set_page_config(
@@ -22,30 +18,32 @@ st.markdown("---")
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
+# --- Simple heuristic AI detector ---
+def simple_ai_detector(img: Image.Image):
+    # Resize and convert to array
+    img = img.resize((128,128)).convert("RGB")
+    arr = np.array(img)
+    # Example heuristic: high smoothness = likely AI
+    std_dev = arr.std()
+    likelihood = max(0, min(100, int(100 - std_dev)))  # 0-100%
+    verdict = "Likely AI" if likelihood > 50 else "Likely Real"
+    return verdict, likelihood
+
 # --- Tab 1: Upload & Detect ---
 with tab1:
-    st.header("Upload a File to Detect Deepfake")
+    st.header("Upload a File to Detect AI")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
-
+    
     if uploaded_file is not None:
+        st.image(uploaded_file, use_container_width=True)
+        img = Image.open(uploaded_file)
+        
         try:
-            uploaded_file.seek(0)  # reset file pointer
-            img_pil = Image.open(uploaded_file).convert("RGB")
-            st.image(img_pil, use_container_width=True)
-
-            # Convert image for AI model
-            img_np = np.array(img_pil.resize((128,128)))/255.0
-            img_np = np.expand_dims(img_np, axis=0)
-
-            likelihood = float(model.predict(img_np)[0][0])*100
-            st.info(f"AI likelihood: {likelihood:.1f}%")
-            if likelihood > 50:
-                st.warning("⚠️ Likely AI-generated")
-            else:
-                st.success("✅ Likely real")
-
+            verdict, likelihood = simple_ai_detector(img)
+            st.success(f"Verdict: {verdict} ({likelihood}%)")
+            st.info("Tip: Look for unnatural blurs, weird facial expressions, or distorted features in AI-generated images.")
         except Exception as e:
-            st.error(f"Could not analyze the image. Error: {str(e)}")
+            st.error(f"Could not analyze the image. Error: {e}")
 
 # --- Tab 2: Mini-Game ---
 with tab2:
@@ -53,94 +51,92 @@ with tab2:
 
     ai_folder = "ai_faces"
     real_folder = "real_faces"
-    valid_exts = [".jpg", ".jpeg", ".png"]
 
-    ai_images = [f for f in os.listdir(ai_folder) if os.path.splitext(f)[1].lower() in valid_exts]
-    real_images = [f for f in os.listdir(real_folder) if os.path.splitext(f)[1].lower() in valid_exts]
-
-    if len(ai_images) == 0 or len(real_images) == 0:
-        st.warning("No images found in one of the folders.")
+    if not os.path.exists(ai_folder) or not os.path.exists(real_folder):
+        st.error("AI or Real images folder not found.")
     else:
-        # --- Session state ---
-        if "ai_deck" not in st.session_state:
-            st.session_state.ai_deck = ai_images.copy()
-        if "real_deck" not in st.session_state:
-            st.session_state.real_deck = real_images.copy()
-        if "left_img" not in st.session_state:
-            st.session_state.left_img = None
-        if "right_img" not in st.session_state:
-            st.session_state.right_img = None
-        if "left_is_fake" not in st.session_state:
-            st.session_state.left_is_fake = None
-        if "guess_submitted" not in st.session_state:
-            st.session_state.guess_submitted = False
-        if "new_round_flag" not in st.session_state:
-            st.session_state.new_round_flag = False
+        valid_extensions = [".jpg", ".jpeg", ".png"]
+        ai_images = [f for f in os.listdir(ai_folder) if os.path.splitext(f)[1].lower() in valid_extensions]
+        real_images = [f for f in os.listdir(real_folder) if os.path.splitext(f)[1].lower() in valid_extensions]
 
-        # --- New round setup ---
-        def setup_new_round():
+        if len(ai_images) == 0 or len(real_images) == 0:
+            st.warning("No images found in one of the folders.")
+        else:
+            # Initialize decks and round state
+            if "ai_deck" not in st.session_state:
+                st.session_state.ai_deck = ai_images.copy()
+            if "real_deck" not in st.session_state:
+                st.session_state.real_deck = real_images.copy()
+            if "round_active" not in st.session_state:
+                st.session_state.round_active = True
+            if "guess_submitted" not in st.session_state:
+                st.session_state.guess_submitted = False
+
+            # End-of-game
             if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
-                return
-            ai_img_name = random.choice(st.session_state.ai_deck)
-            st.session_state.ai_deck.remove(ai_img_name)
-            real_img_name = random.choice(st.session_state.real_deck)
-            st.session_state.real_deck.remove(real_img_name)
-
-            ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400,400))
-            real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400,400))
-
-            left_is_fake = random.choice([True, False])
-            if left_is_fake:
-                st.session_state.left_img = ai_img
-                st.session_state.right_img = real_img
-                st.session_state.left_is_fake = True
+                st.success("🎉 You’ve completed all challenges!")
+                tips = [
+                    "Look for unnatural blurs or smudges around facial features.",
+                    "Notice weird facial expressions or asymmetry.",
+                    "Check for distorted or misaligned facial proportions.",
+                    "Eyes, ears, and teeth can sometimes appear distorted in AI images.",
+                    "Shadows and lighting might look unnatural or inconsistent."
+                ]
+                st.info("Tip: " + random.choice(tips))
             else:
-                st.session_state.left_img = real_img
-                st.session_state.right_img = ai_img
-                st.session_state.left_is_fake = False
+                # Pick new images if starting or after correct guess
+                if "left_img" not in st.session_state or not st.session_state.round_active:
+                    if len(st.session_state.ai_deck) > 0 and len(st.session_state.real_deck) > 0:
+                        ai_img_name = random.choice(st.session_state.ai_deck)
+                        st.session_state.ai_deck.remove(ai_img_name)
 
-            st.session_state.guess_submitted = False
-            st.session_state.new_round_flag = False
+                        real_img_name = random.choice(st.session_state.real_deck)
+                        st.session_state.real_deck.remove(real_img_name)
 
-        # --- Initialize round ---
-        if st.session_state.left_img is None or st.session_state.right_img is None or st.session_state.new_round_flag:
-            setup_new_round()
+                        ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
+                        real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
-        # Display images
-        col1, col2 = st.columns([1,1])
-        with col1:
-            st.image(st.session_state.left_img, caption="Left", use_container_width=True)
-        with col2:
-            st.image(st.session_state.right_img, caption="Right", use_container_width=True)
+                        left_is_fake = random.choice([True, False])
+                        if left_is_fake:
+                            st.session_state.left_img = ai_img
+                            st.session_state.right_img = real_img
+                            st.session_state.left_is_fake = True
+                        else:
+                            st.session_state.left_img = real_img
+                            st.session_state.right_img = ai_img
+                            st.session_state.left_is_fake = False
 
-        # Guess logic
-        if not st.session_state.guess_submitted:
-            guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
-            if st.button("Submit Guess"):
-                correct = "Left" if st.session_state.left_is_fake else "Right"
-                if guess == correct:
-                    st.balloons()
-                    st.success("Correct! 🎉")
-                    st.session_state.guess_submitted = True
-                else:
-                    st.error(f"Wrong — try again! The AI image was not {guess}.")
+                        st.session_state.round_active = True
+                        st.session_state.guess_submitted = False
 
-        # New Challenge button
-        if st.session_state.guess_submitted:
-            if st.button("New Challenge"):
-                setup_new_round()
+                # Display images
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.image(st.session_state.left_img, caption="Left", use_container_width=True)
+                with col2:
+                    st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-        # End-of-game tips
-        if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
-            st.success("🎉 You’ve completed all challenges!")
-            tips = [
-                "Look for unnatural blurs or smudges around facial features.",
-                "Notice weird facial expressions or asymmetry.",
-                "Check for distorted or misaligned facial proportions.",
-                "Eyes, ears, and teeth can sometimes appear distorted in AI images.",
-                "Shadows and lighting might look unnatural or inconsistent."
-            ]
-            st.info("Tip: " + random.choice(tips))
+                # Only allow guess if not yet submitted
+                if not st.session_state.guess_submitted:
+                    guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+
+                    if st.button("Submit Guess"):
+                        correct = "Left" if st.session_state.left_is_fake else "Right"
+                        if guess == correct:
+                            st.balloons()
+                            st.success("Correct! 🎉")
+                            st.session_state.round_active = False
+                            st.session_state.guess_submitted = True
+                        else:
+                            st.error(f"Wrong — try again! The AI image was not {guess}.")
+
+                # Show New Challenge button only after correct guess
+                if st.session_state.guess_submitted:
+                    if st.button("New Challenge"):
+                        st.session_state.left_img = None
+                        st.session_state.right_img = None
+                        st.session_state.round_active = False
+                        st.session_state.guess_submitted = False
 
 # --- Tab 3: Tips & Safety ---
 with tab3:
