@@ -90,16 +90,24 @@ with tab2:
     if len(ai_images) == 0 or len(real_images) == 0:
         st.warning("No images found in one of the folders.")
     else:
+        # Initialize decks and round state
         if "ai_deck" not in st.session_state:
             st.session_state.ai_deck = ai_images.copy()
         if "real_deck" not in st.session_state:
             st.session_state.real_deck = real_images.copy()
+        if "left_img" not in st.session_state:
+            st.session_state.left_img = None
+        if "right_img" not in st.session_state:
+            st.session_state.right_img = None
+        if "left_is_fake" not in st.session_state:
+            st.session_state.left_is_fake = None
         if "round_active" not in st.session_state:
             st.session_state.round_active = True
         if "guess_submitted" not in st.session_state:
             st.session_state.guess_submitted = False
-        if "left_img" not in st.session_state or not st.session_state.round_active:
-            # Pick new images only if starting a new round
+
+        # Pick new images ONLY when New Challenge clicked or first load
+        if st.session_state.left_img is None and st.session_state.round_active:
             ai_img_name = random.choice(st.session_state.ai_deck)
             st.session_state.ai_deck.remove(ai_img_name)
             real_img_name = random.choice(st.session_state.real_deck)
@@ -118,8 +126,34 @@ with tab2:
                 st.session_state.right_img = ai_img
                 st.session_state.left_is_fake = False
 
-            st.session_state.round_active = True
-            st.session_state.guess_submitted = False
+        # Display images
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            st.image(st.session_state.left_img, caption="Left", use_container_width=True)
+        with col2:
+            st.image(st.session_state.right_img, caption="Right", use_container_width=True)
+
+        # Submit Guess logic
+        guess_disabled = st.session_state.guess_submitted
+        if not guess_disabled:
+            guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+            if st.button("Submit Guess"):
+                correct = "Left" if st.session_state.left_is_fake else "Right"
+                if guess == correct:
+                    st.balloons()
+                    st.success("Correct! 🎉")
+                    st.session_state.guess_submitted = True
+                    st.session_state.round_active = False
+                else:
+                    st.error(f"Wrong — try again! The AI image was not {guess}.")
+
+        # Only show New Challenge after correct guess
+        if st.session_state.guess_submitted:
+            if st.button("New Challenge"):
+                st.session_state.left_img = None
+                st.session_state.right_img = None
+                st.session_state.round_active = True
+                st.session_state.guess_submitted = False
 
         # Display images
         col1, col2 = st.columns([1, 1])
