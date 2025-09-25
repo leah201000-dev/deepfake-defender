@@ -76,9 +76,7 @@ with tab1:
         else:
             st.warning("No training images found in ai_faces or real_faces folders.")
 
-# ---------------------------
-# Tab 2: Mini-Game
-# ---------------------------
+# --- Tab 2: Mini-Game ---
 with tab2:
     st.write("Guess which image is AI-generated!")
 
@@ -100,68 +98,56 @@ with tab2:
             st.session_state.round_active = True
         if "guess_submitted" not in st.session_state:
             st.session_state.guess_submitted = False
+        if "left_img" not in st.session_state or not st.session_state.round_active:
+            # Pick new images only if starting a new round
+            ai_img_name = random.choice(st.session_state.ai_deck)
+            st.session_state.ai_deck.remove(ai_img_name)
+            real_img_name = random.choice(st.session_state.real_deck)
+            st.session_state.real_deck.remove(real_img_name)
 
-        if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
-            st.success("🎉 You’ve completed all challenges!")
-            tips = [
-                "Look for unnatural blurs or smudges around facial features.",
-                "Notice weird facial expressions or asymmetry.",
-                "Check for distorted or misaligned facial proportions.",
-                "Eyes, ears, and teeth can sometimes appear distorted in AI images.",
-                "Shadows and lighting might look unnatural or inconsistent."
-            ]
-            st.info("Tip: " + random.choice(tips))
+            ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
+            real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
-        else:
-            if "left_img" not in st.session_state or not st.session_state.round_active:
-                ai_img_name = random.choice(st.session_state.ai_deck)
-                st.session_state.ai_deck.remove(ai_img_name)
-                real_img_name = random.choice(st.session_state.real_deck)
-                st.session_state.real_deck.remove(real_img_name)
+            left_is_fake = random.choice([True, False])
+            if left_is_fake:
+                st.session_state.left_img = ai_img
+                st.session_state.right_img = real_img
+                st.session_state.left_is_fake = True
+            else:
+                st.session_state.left_img = real_img
+                st.session_state.right_img = ai_img
+                st.session_state.left_is_fake = False
 
-                ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
-                real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
+            st.session_state.round_active = True
+            st.session_state.guess_submitted = False
 
-                left_is_fake = random.choice([True, False])
-                if left_is_fake:
-                    st.session_state.left_img = ai_img
-                    st.session_state.right_img = real_img
-                    st.session_state.left_is_fake = True
-                else:
-                    st.session_state.left_img = real_img
-                    st.session_state.right_img = ai_img
-                    st.session_state.left_is_fake = False
+        # Display images
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            st.image(st.session_state.left_img, caption="Left", use_container_width=True)
+        with col2:
+            st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-                st.session_state.round_active = True
-                st.session_state.guess_submitted = False
-
-            col1, col2 = st.columns([1,1])
-            with col1:
-                st.image(st.session_state.left_img, caption="Left", use_container_width=True)
-            with col2:
-                st.image(st.session_state.right_img, caption="Right", use_container_width=True)
-
-            guess_disabled = st.session_state.guess_submitted  # Disable after correct guess
-            guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess", disabled=guess_disabled)
-
-            if not st.session_state.guess_submitted:
-                if st.button("Submit Guess", key="submit_guess"):
-                    correct = "Left" if st.session_state.left_is_fake else "Right"
-                    if guess == correct:
-                        st.balloons()
-                        st.success("Correct! 🎉")
-                        st.session_state.guess_submitted = True
-                        st.session_state.round_active = False
-                    else:
-                        st.error(f"Wrong — try again! The AI image was not {guess}.")
-
-            # Only show New Challenge after correct guess
-            if st.session_state.guess_submitted:
-                if st.button("New Challenge", key="new_challenge"):
-                    st.session_state.left_img = None
-                    st.session_state.right_img = None
+        # Submit Guess logic
+        if not st.session_state.guess_submitted:
+            guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+            if st.button("Submit Guess"):
+                correct = "Left" if st.session_state.left_is_fake else "Right"
+                if guess == correct:
+                    st.balloons()
+                    st.success("Correct! 🎉")
+                    st.session_state.guess_submitted = True
                     st.session_state.round_active = False
-                    st.session_state.guess_submitted = False
+                else:
+                    st.error(f"Wrong — try again! The AI image was not {guess}.")
+
+        # New Challenge button only works after correct guess
+        if st.session_state.guess_submitted:
+            if st.button("New Challenge"):
+                st.session_state.left_img = None
+                st.session_state.right_img = None
+                st.session_state.round_active = True  # allow next round
+                st.session_state.guess_submitted = False
 
 # ---------------------------
 # Tab 3: Tips & Safety
