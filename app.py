@@ -81,13 +81,22 @@ with tab2:
         st.warning("No images found in one of the folders.")
     else:
         # Initialize session state
-        for key, value in [("ai_deck", ai_images.copy()), ("real_deck", real_images.copy()),
-                           ("left_img", None), ("right_img", None), ("left_is_fake", None),
-                           ("guess_submitted", False)]:
-            if key not in st.session_state:
-                st.session_state[key] = value
+        if "ai_deck" not in st.session_state:
+            st.session_state.ai_deck = ai_images.copy()
+        if "real_deck" not in st.session_state:
+            st.session_state.real_deck = real_images.copy()
+        if "left_img" not in st.session_state:
+            st.session_state.left_img = None
+        if "right_img" not in st.session_state:
+            st.session_state.right_img = None
+        if "left_is_fake" not in st.session_state:
+            st.session_state.left_is_fake = None
+        if "guess_submitted" not in st.session_state:
+            st.session_state.guess_submitted = False
+        if "new_round_flag" not in st.session_state:
+            st.session_state.new_round_flag = False
 
-        # Function to set new round images
+        # Function to set up new round
         def setup_new_round():
             if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
                 return
@@ -110,9 +119,10 @@ with tab2:
                 st.session_state.left_is_fake = False
 
             st.session_state.guess_submitted = False
+            st.session_state.new_round_flag = False
 
         # Setup initial round if images not yet loaded
-        if st.session_state.left_img is None or st.session_state.right_img is None:
+        if st.session_state.left_img is None or st.session_state.right_img is None or st.session_state.new_round_flag:
             setup_new_round()
 
         # Display images
@@ -134,22 +144,10 @@ with tab2:
                 else:
                     st.error(f"Wrong — try again! The AI image was not {guess}.")
 
-        # Show New Challenge button only after correct guess
+        # New Challenge button
         if st.session_state.guess_submitted:
             if st.button("New Challenge"):
-                setup_new_round()
-
-        # End-of-game tips
-        if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
-            st.success("🎉 You’ve completed all challenges!")
-            tips = [
-                "Look for unnatural blurs or smudges around facial features.",
-                "Notice weird facial expressions or asymmetry.",
-                "Check for distorted or misaligned facial proportions.",
-                "Eyes, ears, and teeth can sometimes appear distorted in AI images.",
-                "Shadows and lighting might look unnatural or inconsistent."
-            ]
-            st.info("Tip: " + random.choice(tips))
+                st.session_state.new_round_flag = True
 
 # --- Tab 3: Tips & Safety ---
 with tab3:
