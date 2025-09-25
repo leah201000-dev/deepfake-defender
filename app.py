@@ -49,7 +49,7 @@ with tab1:
 
         for f in ai_images:
             feature = extract_features(Image.open(os.path.join(ai_folder,f)))
-            X.append([feature])  # 2D
+            X.append([feature])
             y.append(1)
         for f in real_images:
             feature = extract_features(Image.open(os.path.join(real_folder,f)))
@@ -143,3 +143,29 @@ with tab2:
                 if st.button("Submit Guess"):
                     correct = "Left" if st.session_state.left_is_fake else "Right"
                     if guess == correct:
+                        st.balloons()
+                        st.success("Correct! 🎉")
+                        st.session_state.guess_submitted = True
+                        st.session_state.round_active = True  # keep images visible
+                    else:
+                        st.error(f"Wrong — try again!")
+
+            # Show New Challenge button only after correct guess
+            if st.session_state.guess_submitted:
+                if st.button("New Challenge"):
+                    st.session_state.left_img = None
+                    st.session_state.right_img = None
+                    st.session_state.round_active = False
+                    st.session_state.guess_submitted = False
+
+# ---------------------------
+# Tab 3: Tips & Safety
+# ---------------------------
+with tab3:
+    st.header("Tips & Safety")
+    st.write("""
+    - Always be cautious with online AI tools and deepfake content.
+    - Protect your personal photos and videos.
+    - Learn to spot deepfakes using visual cues or detection tools.
+    - Remember: AI can be used both creatively and maliciously.
+    """)
