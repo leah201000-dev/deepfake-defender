@@ -1,83 +1,91 @@
-/* --- Body --- */
+/* --- Global --- */
 body {
-    font-family: 'Comic Sans MS', Arial, sans-serif;
+    font-family: 'Poppins', sans-serif;
     background: linear-gradient(135deg, #ffe6f0, #fff0f5);
     color: #ff66b2;
-    text-align: center;
     margin: 0;
-    padding: 2em;
+    padding: 0;
+    text-align: center;
     overflow-x: hidden;
 }
 
 /* --- Header --- */
 header {
+    padding: 3em 1em;
     background: #ffb3d9;
-    padding: 2em;
-    border-radius: 20px;
-    margin-top: 1em;
-    box-shadow: 0px 4px 15px rgba(255,102,178,0.4);
+    box-shadow: 0px 4px 20px rgba(255,102,178,0.3);
 }
 
 header h1 {
     font-size: 3em;
-    text-shadow: 2px 2px #ff99cc;
-    animation: glow 2s ease-in-out infinite alternate;
+    margin-bottom: 0.2em;
 }
 
-@keyframes glow {
-    from { text-shadow: 2px 2px 5px #ff99cc; }
-    to { text-shadow: 2px 2px 20px #ff66b2; }
+header p {
+    font-size: 1.2em;
+    color: #ff4da6;
 }
 
-/* --- Sections --- */
-section {
-    margin: 3em 0;
-    background: #ffe6f0;
+/* --- Main / Cards --- */
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5em;
+    padding: 2em 1em;
+}
+
+.card {
+    background: #fff0f5;
+    border-radius: 25px;
     padding: 2em;
-    border-radius: 20px;
-    box-shadow: 0px 5px 20px rgba(255,102,178,0.3);
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0px 8px 25px rgba(255,102,178,0.3);
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 
-/* --- Links / Buttons --- */
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 12px 30px rgba(255,102,178,0.5);
+}
+
+/* --- Buttons --- */
 a {
     display: inline-block;
     background: #ff99cc;
     color: white;
-    text-decoration: none;
     padding: 0.8em 1.5em;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 1.1em;
     margin-top: 1em;
-    border-radius: 15px;
-    font-weight: bold;
-    transition: 0.3s;
+    text-decoration: none;
+    transition: all 0.3s ease;
 }
 
 a:hover {
     background: #ff66b2;
     transform: scale(1.1);
-    box-shadow: 0px 4px 15px rgba(255,102,178,0.6);
+    box-shadow: 0px 6px 20px rgba(255,102,178,0.5);
 }
 
 /* --- Images --- */
 img {
     border-radius: 20px;
-    box-shadow: 0px 5px 20px rgba(255,102,178,0.4);
-    max-width: 80%;
     margin-top: 1em;
-    transition: transform 0.3s;
-}
-
-img:hover {
-    transform: scale(1.05) rotate(1deg);
+    max-width: 100%;
+    box-shadow: 0px 5px 20px rgba(255,102,178,0.3);
 }
 
 /* --- Footer --- */
 footer {
-    margin-top: 3em;
-    font-weight: bold;
-    color: #ff66b2;
+    margin: 3em 0;
+    font-weight: 600;
+    color: #ff4da6;
 }
 
-/* --- Floating hearts --- */
+/* --- Floating Hearts --- */
 .floating-heart {
     position: fixed;
     width: 30px;
