@@ -26,15 +26,18 @@ with tab1:
 
     if uploaded_file is not None:
         try:
+            # Reset file pointer to start
+            uploaded_file.seek(0)
             img_pil = Image.open(uploaded_file).convert("RGB")
             st.image(img_pil, use_container_width=True)
-            img_np = np.array(img_pil.resize((128,128)))/255.0  # resize to model input
-            img_np = np.expand_dims(img_np, axis=0)  # batch dimension
 
-            # --- Load your trained DeepFake model ---
+            # Convert to numpy for model
+            img_np = np.array(img_pil.resize((128,128)))/255.0
+            img_np = np.expand_dims(img_np, axis=0)
+
+            # Load model and predict
             model = load_model("DeepFake_model.h5")
-            likelihood = float(model.predict(img_np)[0][0])*100  # percentage AI likelihood
-
+            likelihood = float(model.predict(img_np)[0][0])*100
             st.info(f"AI likelihood: {likelihood:.1f}%")
             if likelihood > 50:
                 st.warning("⚠️ Likely AI-generated")
