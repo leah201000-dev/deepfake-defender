@@ -83,13 +83,14 @@ with tab2:
         # Initialize session state
         for key, value in [("ai_deck", ai_images.copy()), ("real_deck", real_images.copy()),
                            ("left_img", None), ("right_img", None), ("left_is_fake", None),
-                           ("round_active", True), ("guess_submitted", False),
-                           ("next_round", True)]:
+                           ("guess_submitted", False)]:
             if key not in st.session_state:
                 st.session_state[key] = value
 
-        # Pick new images if next_round is True
-        if st.session_state.next_round and st.session_state.round_active:
+        # Function to set new round images
+        def setup_new_round():
+            if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
+                return
             ai_img_name = random.choice(st.session_state.ai_deck)
             st.session_state.ai_deck.remove(ai_img_name)
             real_img_name = random.choice(st.session_state.real_deck)
@@ -108,9 +109,11 @@ with tab2:
                 st.session_state.right_img = ai_img
                 st.session_state.left_is_fake = False
 
-            st.session_state.next_round = False
             st.session_state.guess_submitted = False
-            st.session_state.round_active = True
+
+        # Setup initial round if images not yet loaded
+        if st.session_state.left_img is None or st.session_state.right_img is None:
+            setup_new_round()
 
         # Display images
         col1, col2 = st.columns([1,1])
@@ -128,14 +131,13 @@ with tab2:
                     st.balloons()
                     st.success("Correct! 🎉")
                     st.session_state.guess_submitted = True
-                    st.session_state.round_active = False
                 else:
                     st.error(f"Wrong — try again! The AI image was not {guess}.")
 
-        # Show New Challenge button if the guess was submitted
+        # Show New Challenge button only after correct guess
         if st.session_state.guess_submitted:
             if st.button("New Challenge"):
-                st.session_state.next_round = True
+                setup_new_round()
 
         # End-of-game tips
         if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
