@@ -2,6 +2,8 @@ import streamlit as st
 from PIL import Image
 import os
 import random
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 
 # --- Page config ---
 st.set_page_config(
@@ -10,7 +12,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- Global title ---
+# --- Global page title ---
 st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -18,17 +20,67 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["Upload & Detect", "Mini-Game", "Tips & Safety"])
 
 # ---------------------------
-# Tab 1: Upload & Detect
+# Helper function to extract simple features
+# ---------------------------
+def extract_features(image, size=(64, 64)):
+    img = image.resize(size).convert("RGB")
+    arr = np.array(img) / 255.0  # normalize
+    return arr.flatten()
+
+# ---------------------------
+# Tab 1: Upload & Detect with simple AI detection
 # ---------------------------
 with tab1:
     st.header("Upload a File to Detect Deepfake")
-    st.info("This tab is currently for uploading images only. Analysis can be added later.")
+
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
+    
     if uploaded_file is not None:
         st.image(uploaded_file, use_container_width=True)
 
+        # Load training data from your ai_faces and real_faces folders
+        ai_folder = "ai_faces"
+        real_folder = "real_faces"
+        valid_exts = [".jpg", ".jpeg", ".png"]
+
+        X = []
+        y = []
+
+        for f in os.listdir(ai_folder):
+            if os.path.splitext(f)[1].lower() in valid_exts:
+                try:
+                    img = Image.open(os.path.join(ai_folder, f))
+                    X.append(extract_features(img))
+                    y.append(1)  # AI label
+                except:
+                    pass
+
+        for f in os.listdir(real_folder):
+            if os.path.splitext(f)[1].lower() in valid_exts:
+                try:
+                    img = Image.open(os.path.join(real_folder, f))
+                    X.append(extract_features(img))
+                    y.append(0)  # Real label
+                except:
+                    pass
+
+        if len(X) > 0:
+            clf = RandomForestClassifier(n_estimators=100)
+            clf.fit(X, y)
+
+            try:
+                test_img = Image.open(uploaded_file)
+                feat = extract_features(test_img)
+                pred = clf.predict([feat])[0]
+                verdict = "Likely AI-generated" if pred == 1 else "Likely Real"
+                st.success(f"✅ Detection Result: {verdict}")
+            except Exception as e:
+                st.error("Could not analyze the image. Try a different image.")
+        else:
+            st.warning("No training images found in ai_faces or real_faces folders. AI detection cannot run.")
+
 # ---------------------------
-# Tab 2: Mini-Game
+# Tab 2: Mini-Game (unchanged)
 # ---------------------------
 with tab2:
     st.write("Guess which image is AI-generated!")
@@ -52,10 +104,6 @@ with tab2:
             st.session_state.round_active = True
         if "guess_submitted" not in st.session_state:
             st.session_state.guess_submitted = False
-        if "current_round_completed" not in st.session_state:
-            st.session_state.current_round_completed = False
-        if "round_number" not in st.session_state:
-            st.session_state.round_number = 0
 
         # End-of-game
         if len(st.session_state.ai_deck) == 0 or len(st.session_state.real_deck) == 0:
@@ -70,8 +118,7 @@ with tab2:
             st.info("Tip: " + random.choice(tips))
 
         else:
-            # Pick new images if starting or after New Challenge
-            if st.session_state.round_active and not st.session_state.current_round_completed:
+            if "left_img" not in st.session_state or not st.session_state.round_active:
                 ai_img_name = random.choice(st.session_state.ai_deck)
                 st.session_state.ai_deck.remove(ai_img_name)
                 real_img_name = random.choice(st.session_state.real_deck)
@@ -90,38 +137,35 @@ with tab2:
                     st.session_state.right_img = ai_img
                     st.session_state.left_is_fake = False
 
+                st.session_state.round_active = True
                 st.session_state.guess_submitted = False
-                st.session_state.current_round_completed = False
-                st.session_state.round_number += 1
 
             # Display images
-            col1, col2 = st.columns([1,1])
+            col1, col2 = st.columns([1, 1])
             with col1:
                 st.image(st.session_state.left_img, caption="Left", use_container_width=True)
             with col2:
                 st.image(st.session_state.right_img, caption="Right", use_container_width=True)
 
-            # Only show Submit Guess if not yet submitted
             if not st.session_state.guess_submitted:
-                guess = st.radio("Which is AI-generated?", ["Left", "Right"], key=f"guess_{st.session_state.round_number}")
-                if st.button("Submit Guess", key=f"submit_{st.session_state.round_number}"):
+                guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
+
+                if st.button("Submit Guess"):
                     correct = "Left" if st.session_state.left_is_fake else "Right"
                     if guess == correct:
                         st.balloons()
                         st.success("Correct! 🎉")
                         st.session_state.guess_submitted = True
-                        st.session_state.current_round_completed = True
+                        st.session_state.round_active = False
                     else:
-                        st.error(f"Wrong — the AI image is {correct}. You must guess correctly to continue.")
+                        st.error(f"Wrong — try again! The AI image was not {guess}.")
 
-            # Show New Challenge button only after correct guess
-            if st.session_state.guess_submitted and st.session_state.current_round_completed:
+            if st.session_state.guess_submitted:
                 if st.button("New Challenge"):
                     st.session_state.left_img = None
                     st.session_state.right_img = None
-                    st.session_state.round_active = True
+                    st.session_state.round_active = False
                     st.session_state.guess_submitted = False
-                    st.session_state.current_round_completed = False
 
 # ---------------------------
 # Tab 3: Tips & Safety
