@@ -8,16 +8,20 @@ from sklearn.ensemble import RandomForestClassifier
 import cv2
 
 # ---------------------------
-# Dummy lightweight AI detector
+# App title
 # ---------------------------
-# This simple detector uses average color features as a placeholder
-# for demonstration. In practice, you'd replace it with a small ML model.
+st.title("🎮 Deepfake Defender")
+
+# ---------------------------
+# Lightweight AI detection model
+# ---------------------------
+# Uses RGB averages + RandomForest as a small ML model
 def extract_features(img):
     img = img.resize((64, 64)).convert("RGB")
     arr = np.array(img)
     return arr.mean(axis=(0,1))  # simple RGB averages
 
-# Train a dummy classifier on your AI vs real images
+# Train classifier on AI vs real images
 ai_images = [os.path.join("ai_faces", f) for f in os.listdir("ai_faces")]
 real_images = [os.path.join("real_faces", f) for f in os.listdir("real_faces")]
 
@@ -41,11 +45,6 @@ def detect_ai(img):
     features = extract_features(img)
     prob = clf.predict_proba([features])[0][1] * 100
     return prob
-
-# ---------------------------
-# App title
-# ---------------------------
-st.title("🎮 Deepfake Defender")
 
 # ---------------------------
 # Tabs
