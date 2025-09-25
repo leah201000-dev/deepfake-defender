@@ -114,7 +114,7 @@ with tab2:
                     else:
                         st.error(f"Wrong — the AI image is {correct}. You must guess correctly to continue.")
 
-            # New Challenge button only appears after correct guess
+            # Show New Challenge button only after correct guess
             if st.session_state.guess_submitted and st.session_state.current_round_completed:
                 if st.button("New Challenge"):
                     st.session_state.left_img = None
