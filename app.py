@@ -1,8 +1,7 @@
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageOps, ImageEnhance
 import os
 import random
-import numpy as np
 
 # --- Page config ---
 st.set_page_config(
@@ -13,19 +12,54 @@ st.set_page_config(
 
 # --- Global page title ---
 st.markdown("<h1 style='text-align: center;'>Deepfake Defender</h1>", unsafe_allow_html=True)
-st.markdown("---")  # optional horizontal line
+st.markdown("---")
 
 # --- Tabs ---
-tab1, tab2, tab3 = st.tabs(["Upload & Explore", "Mini-Game", "Tips & Safety"])
+tab1, tab2, tab3 = st.tabs(["Image Playground", "Mini-Game", "Tips & Safety"])
 
-# --- Tab 1: Upload & Explore ---
+# --- Tab 1: Image Playground ---
 with tab1:
-    st.header("Upload an Image or Video")
-    uploaded_file = st.file_uploader("Choose a file...", type=["jpg", "png", "mp4"])
-    
+    st.header("Upload & Play with Your Image")
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
     if uploaded_file is not None:
-        st.image(uploaded_file, use_container_width=True)
-        st.info("This is just a viewer; you can explore images here!")
+        img = Image.open(uploaded_file)
+        st.image(img, caption="Original Image", use_container_width=True)
+
+        st.subheader("Manipulation Options")
+
+        # Flip options
+        flip_option = st.selectbox("Flip Image:", ["None", "Horizontal", "Vertical"])
+        if flip_option == "Horizontal":
+            img = ImageOps.mirror(img)
+        elif flip_option == "Vertical":
+            img = ImageOps.flip(img)
+
+        # Rotation
+        rotate_angle = st.slider("Rotate Image (degrees):", 0, 360, 0)
+        if rotate_angle != 0:
+            img = img.rotate(rotate_angle, expand=True)
+
+        # Color filters
+        color_filter = st.selectbox("Color Filter:", ["None", "Grayscale", "Invert", "Sepia"])
+        if color_filter == "Grayscale":
+            img = ImageOps.grayscale(img)
+        elif color_filter == "Invert":
+            img = ImageOps.invert(img.convert("RGB"))
+        elif color_filter == "Sepia":
+            gray = ImageOps.grayscale(img)
+            sepia = ImageOps.colorize(gray, "#704214", "#C0A080")
+            img = sepia
+
+        # Brightness/Contrast
+        brightness = st.slider("Brightness:", 0.5, 2.0, 1.0)
+        contrast = st.slider("Contrast:", 0.5, 2.0, 1.0)
+        enhancer_b = ImageEnhance.Brightness(img)
+        img = enhancer_b.enhance(brightness)
+        enhancer_c = ImageEnhance.Contrast(img)
+        img = enhancer_c.enhance(contrast)
+
+        st.image(img, caption="Manipulated Image", use_container_width=True)
 
 # --- Tab 2: Mini-Game ---
 with tab2:
@@ -66,7 +100,6 @@ with tab2:
                     "Shadows and lighting might look unnatural or inconsistent."
                 ]
                 st.info("Tip: " + random.choice(tips))
-
             else:
                 # Pick new images if starting or after correct guess
                 if "left_img" not in st.session_state or not st.session_state.round_active:
@@ -77,11 +110,10 @@ with tab2:
                         real_img_name = random.choice(st.session_state.real_deck)
                         st.session_state.real_deck.remove(real_img_name)
 
+                        left_is_fake = random.choice([True, False])
                         ai_img = Image.open(os.path.join(ai_folder, ai_img_name)).resize((400, 400))
                         real_img = Image.open(os.path.join(real_folder, real_img_name)).resize((400, 400))
 
-                        # Random left/right placement
-                        left_is_fake = random.choice([True, False])
                         if left_is_fake:
                             st.session_state.left_img = ai_img
                             st.session_state.right_img = real_img
@@ -104,7 +136,6 @@ with tab2:
                 # Only allow guess if not yet submitted
                 if not st.session_state.guess_submitted:
                     guess = st.radio("Which is AI-generated?", ["Left", "Right"], key="guess")
-
                     if st.button("Submit Guess"):
                         correct = "Left" if st.session_state.left_is_fake else "Right"
                         if guess == correct:
@@ -114,7 +145,6 @@ with tab2:
                             st.session_state.guess_submitted = True
                         else:
                             st.error(f"Wrong — try again! The AI image was not {guess}.")
-                            # Must guess correctly, round_active remains True
 
                 # Show New Challenge button only after correct guess
                 if st.session_state.guess_submitted:
