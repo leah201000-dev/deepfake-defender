@@ -4,24 +4,43 @@ import numpy as np
 import os
 import random
 import time
-from tensorflow.keras.models import load_model
+from sklearn.ensemble import RandomForestClassifier
+import cv2
 
 # ---------------------------
-# Load AI detection model
+# Dummy lightweight AI detector
 # ---------------------------
-MODEL_PATH = "DeepFake_model.h5"
-model = load_model(MODEL_PATH)
+# This simple detector uses average color features as a placeholder
+# for demonstration. In practice, you'd replace it with a small ML model.
+def extract_features(img):
+    img = img.resize((64, 64)).convert("RGB")
+    arr = np.array(img)
+    return arr.mean(axis=(0,1))  # simple RGB averages
 
-def preprocess_image(img, target_size=(224, 224)):
-    img = img.resize(target_size)
-    img_array = np.array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    return img_array
+# Train a dummy classifier on your AI vs real images
+ai_images = [os.path.join("ai_faces", f) for f in os.listdir("ai_faces")]
+real_images = [os.path.join("real_faces", f) for f in os.listdir("real_faces")]
 
-def detect_deepfake(img):
-    img_array = preprocess_image(img)
-    pred = model.predict(img_array)[0][0]
-    return float(pred)
+X = []
+y = []
+
+for path in ai_images:
+    img = Image.open(path)
+    X.append(extract_features(img))
+    y.append(1)  # 1 = AI
+
+for path in real_images:
+    img = Image.open(path)
+    X.append(extract_features(img))
+    y.append(0)  # 0 = Real
+
+clf = RandomForestClassifier(n_estimators=50)
+clf.fit(X, y)
+
+def detect_ai(img):
+    features = extract_features(img)
+    prob = clf.predict_proba([features])[0][1] * 100
+    return prob
 
 # ---------------------------
 # App title
@@ -84,7 +103,7 @@ with tab1:
     else:
         st.success(f"🎉 All rounds completed! Correct guesses: {st.session_state.correct_count}/{len(st.session_state.images)}")
         st.info("Tip: Look for unnatural blurs, weird facial expressions, or distorted features in AI-generated images.")
-        
+
 # ---------------------------
 # Upload Tab
 # ---------------------------
@@ -94,7 +113,7 @@ with tab2:
         pil_img = Image.open(uploaded_file).convert("RGB")
         st.image(pil_img, use_container_width=True)
         with st.spinner("Scanning for AI artifacts..."):
-            likelihood = detect_deepfake(pil_img) * 100
+            likelihood = detect_ai(pil_img)
             time.sleep(1)
         verdict = "⚠️ Likely AI-generated" if likelihood > 50 else "✅ Likely Real"
         st.success("Scan complete!")
